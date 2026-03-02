@@ -1453,6 +1453,7 @@ export function App(): JSX.Element {
       setCaptureNotice({ tone: "success", message: "Saving screenshot..." });
       return;
     }
+    setCaptureRecordingActive((prev) => !prev);
     setCaptureNotice({
       tone: "success",
       message: captureRecordingActive ? "Stopping recording..." : `Starting recording (${codec})...`,

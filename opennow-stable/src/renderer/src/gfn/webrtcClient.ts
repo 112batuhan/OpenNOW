@@ -1477,8 +1477,12 @@ export class GfnWebRtcClient {
           };
         }
         if (action.includes("record")) {
+          const indicatesStop =
+            /\bstop|stopped|ended|saved\b/i.test(message)
+            || status === "stopped"
+            || status === "stop";
           return {
-            kind: success ? "recording-started" : "capture-error",
+            kind: success ? (indicatesStop ? "recording-stopped" : "recording-started") : "capture-error",
             success,
             message: message || (success ? "Recording updated" : "Recording action failed"),
             timestampMs: now,
@@ -1851,29 +1855,39 @@ export class GfnWebRtcClient {
     action: CaptureAction,
     recordingActive: boolean,
   ): { accepted: boolean; reason?: string } {
-    if (!this.controlChannel || this.controlChannel.readyState !== "open") {
-      return { accepted: false, reason: "Control channel is not open" };
+    if (!this.inputReady || !this.ensureKeyboardInputMode()) {
+      return { accepted: false, reason: "Input channel is not ready" };
     }
 
-    const command = action === "save-instant-replay"
-      ? { name: "rise_save_instant_replay" }
+    const combo = action === "save-instant-replay"
+      ? { label: "Alt+F10", keyVk: 0x79, keyScancode: 0x43 } // Instant Replay save
       : action === "take-screenshot"
-        ? { name: "rise_save_screenshot" }
-        : { name: "rise_start_recording", enable: recordingActive ? 0 : 1 };
+        ? { label: "Alt+F1", keyVk: 0x70, keyScancode: 0x3a } // Screenshot
+        : { label: "Alt+F9", keyVk: 0x78, keyScancode: 0x42 }; // Record toggle
 
-    const payload = {
-      type: "capture-command",
-      command,
-      sentAtMs: Date.now(),
-    };
+    // Mirrors the official hotkey-driven capture workflow (DVRSave/DVRToggle/Screenshot).
+    const alt = { vk: 0xa4, scancode: 0xe2, flag: 0x04 };
 
     try {
-      this.controlChannel.send(JSON.stringify(payload));
-      this.log(`Capture command sent: ${command.name}`);
+      this.sendKeyPacket(alt.vk, alt.scancode, alt.flag, true);
+      this.sendKeyPacket(combo.keyVk, combo.keyScancode, alt.flag, true);
+      this.sendKeyPacket(combo.keyVk, combo.keyScancode, alt.flag, false);
+      this.sendKeyPacket(alt.vk, alt.scancode, 0, false);
+
+      if (this.controlChannel && this.controlChannel.readyState === "open") {
+        const legacyPayload = action === "save-instant-replay"
+          ? { name: "rise_save_instant_replay" }
+          : action === "take-screenshot"
+            ? { name: "rise_save_screenshot" }
+            : { name: "rise_start_recording", enable: recordingActive ? 0 : 1 };
+        this.controlChannel.send(JSON.stringify({ type: "capture-command", command: legacyPayload, sentAtMs: Date.now() }));
+      }
+
+      this.log(`Capture hotkey sent: ${combo.label}`);
       return { accepted: true };
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      this.log(`Capture command failed: ${reason}`);
+      this.log(`Capture hotkey failed: ${reason}`);
       return { accepted: false, reason };
     }
   }
