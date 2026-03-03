@@ -1518,6 +1518,21 @@ export function SettingsPage({ settings, regions, onSettingChange }: SettingsPag
               </label>
             </div>
 
+            <div className="settings-row">
+              <label className="settings-label">
+                Raw Mouse Input
+                <span className="settings-hint">Uses unadjusted pointer lock and bypasses sensitivity scaling.</span>
+              </label>
+              <label className="settings-toggle">
+                <input
+                  type="checkbox"
+                  checked={settings.rawMouseInput}
+                  onChange={(e) => handleChange("rawMouseInput", e.target.checked)}
+                />
+                <span className="settings-toggle-track" />
+              </label>
+            </div>
+
             {/* Mouse Sensitivity */}
             <div className="settings-row settings-row--column">
               <div className="settings-row-top">
@@ -1532,6 +1547,7 @@ export function SettingsPage({ settings, regions, onSettingChange }: SettingsPag
                   max={4}
                   step={0.01}
                   value={settings.mouseSensitivity}
+                  disabled={settings.rawMouseInput}
                   onChange={(e) => handleChange("mouseSensitivity", parseFloat(e.target.value))}
                 />
                 <input
@@ -1542,13 +1558,18 @@ export function SettingsPage({ settings, regions, onSettingChange }: SettingsPag
                   max={4}
                   step={0.01}
                   value={Number(settings.mouseSensitivity.toFixed(2))}
+                  disabled={settings.rawMouseInput}
                   onChange={(e) => {
                     const v = parseFloat(e.target.value || "0");
                     if (Number.isFinite(v)) handleChange("mouseSensitivity", Math.max(0.1, Math.min(4, v)));
                   }}
                 />
               </div>
-              <span className="settings-subtle-hint">Multiplier applied to mouse movement (1.00 = default)</span>
+              <span className="settings-subtle-hint">
+                {settings.rawMouseInput
+                  ? "Disabled while Raw Mouse Input is enabled."
+                  : "Multiplier applied to mouse movement (1.00 = default)"}
+              </span>
             </div>
 
             <div className="settings-row settings-row--column">

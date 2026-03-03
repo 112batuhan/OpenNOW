@@ -42,6 +42,7 @@ export interface Settings {
   colorQuality: ColorQuality;
   region: string;
   clipboardPaste: boolean;
+  rawMouseInput: boolean;
   mouseSensitivity: number;
   shortcutToggleStats: string;
   shortcutTogglePointerLock: string;

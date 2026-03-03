@@ -40,7 +40,7 @@ export function Navbar({
   const navItems = [
     { id: "home" as const, label: "Store", icon: House },
     { id: "library" as const, label: "Library", icon: Library },
-    { id: "clips" as const, label: "Clips", icon: Clapperboard },
+    { id: "clips" as const, label: "Media", icon: Clapperboard },
     { id: "settings" as const, label: "Settings", icon: Settings },
   ];
 

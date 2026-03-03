@@ -1459,6 +1459,22 @@ button.game-card-store-chip.active:hover {
   object-fit: cover;
 }
 
+.clip-card-type-pill {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: rgba(10, 10, 12, 0.9);
+  color: var(--ink);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
 .clip-card-fallback {
   width: 100%;
   height: 100%;
@@ -1591,6 +1607,90 @@ button.game-card-store-chip.active:hover {
   max-width: 100%;
   max-height: calc(92vh - 72px);
   object-fit: contain;
+}
+
+.clips-preview-modal--editor {
+  width: min(1040px, 96vw);
+}
+
+.media-editor {
+  border-top: 1px solid var(--panel-border);
+  background: rgba(9, 12, 18, 0.98);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.media-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.media-editor-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.media-editor-time {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.media-editor-scrubber {
+  display: flex;
+  align-items: center;
+}
+
+.media-editor-trim-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.media-editor-trim-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+}
+
+.media-editor-range {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.media-editor-range--playhead {
+  accent-color: #f97316;
+}
+
+.media-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.media-editor-export-btn {
+  margin-top: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  text-decoration: none !important;
+}
+
+.media-editor-message {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
 }
 
 
@@ -2591,6 +2691,47 @@ button.game-card-store-chip.active:hover {
 .sv-capture-notice--warn {
   border-color: color-mix(in srgb, var(--warning) 55%, var(--panel-border));
   color: #ffe3ad;
+}
+
+.sv-capture-state {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 1003;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sv-capture-state-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--panel-border);
+  background: rgba(10, 10, 12, 0.92);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.sv-capture-state-chip--recording {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #ffd7d7;
+}
+
+.sv-capture-state-chip--recording svg {
+  color: var(--error);
+}
+
+.sv-capture-state-chip--replay {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--panel-border));
+  color: #d2ecff;
+}
+
+.sv-capture-state-chip--replay svg {
+  color: var(--accent);
 }
 
 /* Stats HUD (StreamView inline stats) */

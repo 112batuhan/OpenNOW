@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { JSX } from "react";
-import { Maximize, Minimize, Gamepad2, Loader2, LogOut, Clock3, AlertTriangle, Mic, MicOff } from "lucide-react";
+import { Maximize, Minimize, Gamepad2, Loader2, LogOut, Clock3, AlertTriangle, Mic, MicOff, Circle, Rewind } from "lucide-react";
 import type { StreamDiagnostics } from "../gfn/webrtcClient";
 import { getStoreDisplayName, getStoreIconComponent } from "./GameCard";
 
@@ -43,6 +43,9 @@ interface StreamViewProps {
     tone: "success" | "warn";
     message: string;
   } | null;
+  recordingActive: boolean;
+  recordingElapsedSeconds: number;
+  instantReplayActive: boolean;
   isConnecting: boolean;
   gameTitle: string;
   platformStore?: string;
@@ -119,6 +122,9 @@ export function StreamView({
   sessionClockShowDurationSeconds,
   streamWarning,
   captureNotice,
+  recordingActive,
+  recordingElapsedSeconds,
+  instantReplayActive,
   isConnecting,
   gameTitle,
   platformStore,
@@ -320,6 +326,23 @@ export function StreamView({
       {captureNotice && !isConnecting && !exitPrompt.open && (
         <div className={`sv-capture-notice sv-capture-notice--${captureNotice.tone}`}>
           <span>{captureNotice.message}</span>
+        </div>
+      )}
+
+      {(recordingActive || instantReplayActive) && !isConnecting && !exitPrompt.open && (
+        <div className="sv-capture-state">
+          {recordingActive && (
+            <div className="sv-capture-state-chip sv-capture-state-chip--recording">
+              <Circle size={10} />
+              <span>REC {formatElapsed(recordingElapsedSeconds)}</span>
+            </div>
+          )}
+          {instantReplayActive && (
+            <div className="sv-capture-state-chip sv-capture-state-chip--replay">
+              <Rewind size={10} />
+              <span>Instant Replay</span>
+            </div>
+          )}
         </div>
       )}
 

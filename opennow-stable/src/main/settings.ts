@@ -18,6 +18,8 @@ export interface Settings {
   region: string;
   /** Enable clipboard paste into stream */
   clipboardPaste: boolean;
+  /** Use raw mouse input path (no sensitivity scaling) */
+  rawMouseInput: boolean;
   /** Mouse sensitivity multiplier */
   mouseSensitivity: number;
   /** Toggle stats overlay shortcut */
@@ -77,6 +79,7 @@ const DEFAULT_SETTINGS: Settings = {
   colorQuality: "10bit_420",
   region: "",
   clipboardPaste: false,
+  rawMouseInput: true,
   mouseSensitivity: 1,
   shortcutToggleStats: "F3",
   shortcutTogglePointerLock: "F8",

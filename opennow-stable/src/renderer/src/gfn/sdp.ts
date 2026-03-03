@@ -451,10 +451,13 @@ export function mungeAnswerSdp(sdp: string, maxBitrateKbps: number): string {
 export function buildNvstSdp(params: NvstParams): string {
   console.log(`[SDP] buildNvstSdp: ${params.width}x${params.height}@${params.fps}fps, codec=${params.codec}, colorQuality=${params.colorQuality}, maxBitrate=${params.maxBitrateKbps}kbps`);
   console.log(`[SDP] buildNvstSdp: ICE ufrag=${params.credentials.ufrag}, pwd=${params.credentials.pwd.slice(0, 8)}..., fingerprint=${params.credentials.fingerprint.slice(0, 20)}...`);
-  // Adaptive profile:
-  // allow bitrate to scale down under congestion to reduce stutter and input lag.
-  const minBitrate = Math.max(5000, Math.floor(params.maxBitrateKbps * 0.35));
-  const initialBitrate = Math.max(minBitrate, Math.floor(params.maxBitrateKbps * 0.7));
+  // Mirror official client bitrate ramping:
+  // - clamp negotiated max to at least 4 Mbps
+  // - start/initial peak at 25% of max (min 4 Mbps)
+  // - keep minimum floor at 4 Mbps to avoid congestion oscillation
+  const maxBitrateKbps = Math.max(4000, params.maxBitrateKbps);
+  const minBitrate = 4000;
+  const initialBitrate = Math.max(minBitrate, Math.round(maxBitrateKbps / 4));
   const isHighFps = params.fps >= 90;
   const is120Fps = params.fps === 120;
   const is240Fps = params.fps >= 240;
@@ -583,15 +586,15 @@ export function buildNvstSdp(params: NvstParams): string {
     `a=video.clientViewportHt:${params.clientViewportHeight}`,
     `a=video.maxFPS:${params.fps}`,
     `a=video.initialBitrateKbps:${initialBitrate}`,
-    `a=video.initialPeakBitrateKbps:${params.maxBitrateKbps}`,
-    `a=vqos.bw.maximumBitrateKbps:${params.maxBitrateKbps}`,
+    `a=video.initialPeakBitrateKbps:${initialBitrate}`,
+    `a=vqos.bw.maximumBitrateKbps:${maxBitrateKbps}`,
     `a=vqos.bw.minimumBitrateKbps:${minBitrate}`,
-    `a=vqos.bw.peakBitrateKbps:${params.maxBitrateKbps}`,
-    `a=vqos.bw.serverPeakBitrateKbps:${params.maxBitrateKbps}`,
+    `a=vqos.bw.peakBitrateKbps:${maxBitrateKbps}`,
+    `a=vqos.bw.serverPeakBitrateKbps:${maxBitrateKbps}`,
     "a=vqos.bw.enableBandwidthEstimation:1",
     "a=vqos.bw.disableBitrateLimit:0",
     // GRC — disabled
-    `a=vqos.grc.maximumBitrateKbps:${params.maxBitrateKbps}`,
+    `a=vqos.grc.maximumBitrateKbps:${maxBitrateKbps}`,
     "a=vqos.grc.enable:0",
     // Encoder settings
     "a=video.maxNumReferenceFrames:4",

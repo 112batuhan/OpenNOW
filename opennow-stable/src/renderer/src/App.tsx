@@ -6,7 +6,6 @@ import type {
   AuthSession,
   AuthUser,
   CaptureAction,
-  CaptureEvent,
   ClipRecord,
   ClipRecordInput,
   GameInfo,
@@ -225,13 +224,6 @@ function chooseCaptureCodec(settingsCodec: VideoCodec): VideoCodec {
   return settingsCodec;
 }
 
-function clipTypeFromCaptureEvent(event: CaptureEvent): ClipRecordInput["clipType"] | null {
-  if (event.kind === "instant-replay-saved") return "instant-replay";
-  if (event.kind === "screenshot-saved") return "screenshot";
-  if (event.kind === "recording-stopped" || event.kind === "recording-started") return "manual-recording";
-  return null;
-}
-
 function toLoadingStatus(status: StreamStatus): StreamLoadingStatus {
   switch (status) {
     case "queue":
@@ -350,6 +342,7 @@ export function App(): JSX.Element {
     colorQuality: "10bit_420",
     region: "",
     clipboardPaste: false,
+    rawMouseInput: true,
     mouseSensitivity: 1,
     shortcutToggleStats: DEFAULT_SHORTCUTS.shortcutToggleStats,
     shortcutTogglePointerLock: DEFAULT_SHORTCUTS.shortcutTogglePointerLock,
@@ -396,6 +389,8 @@ export function App(): JSX.Element {
   const [streamWarning, setStreamWarning] = useState<StreamWarningState | null>(null);
   const [captureNotice, setCaptureNotice] = useState<{ tone: "success" | "warn"; message: string } | null>(null);
   const [captureRecordingActive, setCaptureRecordingActive] = useState(false);
+  const [captureRecordingElapsedSeconds, setCaptureRecordingElapsedSeconds] = useState(0);
+  const [captureInstantReplayActive, setCaptureInstantReplayActive] = useState(false);
 
   const handleControllerPageNavigate = useCallback((direction: "prev" | "next"): void => {
     if (!authSession || streamStatus !== "idle") {
@@ -458,6 +453,8 @@ export function App(): JSX.Element {
     setStreamWarning(null);
     setCaptureNotice(null);
     setCaptureRecordingActive(false);
+    setCaptureRecordingElapsedSeconds(0);
+    setCaptureInstantReplayActive(false);
     setEscHoldReleaseIndicator({ visible: false, progress: 0 });
     setDiagnostics(defaultDiagnostics());
 
@@ -702,7 +699,7 @@ export function App(): JSX.Element {
   ]);
 
   const requestEscLockedPointerCapture = useCallback(async (target: HTMLVideoElement) => {
-    const lockTarget = (target.parentElement as HTMLElement | null) ?? target;
+    const lockTarget = target;
     const requestPointerLockCompat = async (
       options?: { unadjustedMovement?: boolean },
     ): Promise<void> => {
@@ -723,15 +720,20 @@ export function App(): JSX.Element {
       ]).catch(() => {});
     }
 
-    await requestPointerLockCompat({ unadjustedMovement: true })
-      .catch((err: DOMException) => {
-        if (err.name === "NotSupportedError") {
-          return requestPointerLockCompat();
-        }
-        throw err;
-      })
-      .catch(() => {});
-  }, []);
+    if (settings.rawMouseInput) {
+      await requestPointerLockCompat({ unadjustedMovement: true })
+        .catch((err: DOMException) => {
+          if (err.name === "NotSupportedError") {
+            return requestPointerLockCompat();
+          }
+          throw err;
+        })
+        .catch(() => {});
+      return;
+    }
+
+    await requestPointerLockCompat().catch(() => {});
+  }, [settings.rawMouseInput]);
 
   const resolveExitPrompt = useCallback((confirmed: boolean) => {
     const resolver = exitPromptResolverRef.current;
@@ -887,6 +889,7 @@ export function App(): JSX.Element {
               audioElement: audioRef.current,
               microphoneMode: settings.microphoneMode,
               microphoneDeviceId: settings.microphoneDeviceId || undefined,
+              rawMouseInput: settings.rawMouseInput,
               mouseSensitivity: settings.mouseSensitivity,
               onLog: (line: string) => console.log(`[WebRTC] ${line}`),
               onStats: (stats) => setDiagnostics(stats),
@@ -903,52 +906,6 @@ export function App(): JSX.Element {
               },
               onMicStateChange: (state) => {
                 console.log(`[App] Mic state: ${state.state}${state.deviceLabel ? ` (${state.deviceLabel})` : ""}`);
-              },
-              onCaptureEvent: (event) => {
-                if (event.kind === "recording-started") {
-                  setCaptureRecordingActive(true);
-                } else if (event.kind === "recording-stopped") {
-                  setCaptureRecordingActive(false);
-                }
-
-                setCaptureNotice({
-                  tone: event.success ? "success" : "warn",
-                  message: event.message,
-                });
-
-                const clipType = clipTypeFromCaptureEvent(event);
-                if (!clipType || !event.success) {
-                  return;
-                }
-
-                if (clipType === "manual-recording" && event.kind !== "recording-stopped") {
-                  return;
-                }
-
-                const currentSession = sessionRef.current;
-                const currentGame = streamingGameRef.current;
-                const currentDiagnostics = diagnosticsRef.current;
-                const clipInput: ClipRecordInput = {
-                  clipType,
-                  status: "saved",
-                  timestampMs: event.timestampMs,
-                  gameTitle: currentGame?.title ?? "Unknown Game",
-                  gameBannerUrl: currentGame?.imageUrl,
-                  machineLabel: currentDiagnostics.gpuType || currentSession?.gpuType || currentSession?.serverIp,
-                  codec: currentDiagnostics.codec || chooseCaptureCodec(settings.codec),
-                  filePath: event.filePath,
-                  fileUrl: event.fileUrl,
-                  durationSeconds: event.durationSeconds,
-                  source: "server",
-                };
-
-                void window.openNow.saveClip(clipInput)
-                  .then((saved) => {
-                    setClips((prev) => [saved, ...prev.filter((item) => item.id !== saved.id)]);
-                  })
-                  .catch((error) => {
-                    console.warn("Failed to persist capture metadata:", error);
-                  });
               },
             });
             // Auto-start microphone if mode is enabled
@@ -997,6 +954,14 @@ export function App(): JSX.Element {
     if (key === "mouseSensitivity") {
       try {
         (clientRef.current as any)?.setMouseSensitivity?.(value as number);
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    if (key === "rawMouseInput") {
+      try {
+        (clientRef.current as any)?.setRawMouseInput?.(Boolean(value));
       } catch {
         // ignore
       }
@@ -1616,6 +1581,7 @@ export function App(): JSX.Element {
 
   const startReplayBuffer = useCallback((): boolean => {
     if (localReplayRecorderRef.current) {
+      setCaptureInstantReplayActive(true);
       return true;
     }
     const stream = createLocalCaptureStream();
@@ -1647,10 +1613,12 @@ export function App(): JSX.Element {
       if (localReplayRecorderRef.current === recorder) {
         localReplayRecorderRef.current = null;
       }
+      setCaptureInstantReplayActive(false);
       stream.getTracks().forEach((track) => track.stop());
     };
     recorder.start(LOCAL_REPLAY_TIMESLICE_MS);
     localReplayRecorderRef.current = recorder;
+    setCaptureInstantReplayActive(true);
     return true;
   }, [createLocalCaptureStream]);
 
@@ -1661,6 +1629,9 @@ export function App(): JSX.Element {
     }
     if (clearBuffer) {
       localReplayChunksRef.current = [];
+    }
+    if (!recorder || recorder.state === "inactive") {
+      setCaptureInstantReplayActive(false);
     }
   }, []);
 
@@ -1695,6 +1666,20 @@ export function App(): JSX.Element {
     }
     stopLocalRecording();
   }, [stopLocalRecording, streamStatus]);
+
+  useEffect(() => {
+    if (!captureRecordingActive) {
+      setCaptureRecordingElapsedSeconds(0);
+      return;
+    }
+    const update = () => {
+      const startedAt = localRecordingStartedAtRef.current || Date.now();
+      setCaptureRecordingElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    };
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [captureRecordingActive]);
 
   const handleCaptureAction = useCallback((action: CaptureAction) => {
     if (streamStatus !== "streaming") {
@@ -2013,6 +1998,9 @@ export function App(): JSX.Element {
             sessionClockShowDurationSeconds={settings.sessionClockShowDurationSeconds}
             streamWarning={streamWarning}
             captureNotice={captureNotice}
+            recordingActive={captureRecordingActive}
+            recordingElapsedSeconds={captureRecordingElapsedSeconds}
+            instantReplayActive={captureInstantReplayActive}
             isConnecting={streamStatus === "connecting"}
             gameTitle={streamingGame?.title ?? "Game"}
             platformStore={streamingStore ?? undefined}
