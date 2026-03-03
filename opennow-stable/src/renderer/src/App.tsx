@@ -154,6 +154,10 @@ function defaultDiagnostics(): StreamDiagnostics {
     serverRegion: "",
     micState: "uninitialized",
     micEnabled: false,
+    cursorVisible: false,
+    cursorX: 0,
+    cursorY: 0,
+    cursorType: 'arrow',
   };
 }
 
@@ -371,6 +375,7 @@ export function App(): JSX.Element {
   // Refs
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cursorRef = useRef<HTMLCanvasElement | null>(null);
   const clientRef = useRef<GfnWebRtcClient | null>(null);
   const sessionRef = useRef<SessionInfo | null>(null);
   const hasInitializedRef = useRef(false);
@@ -1517,6 +1522,7 @@ export function App(): JSX.Element {
           <StreamView
             videoRef={videoRef}
             audioRef={audioRef}
+            cursorRef={cursorRef}
             stats={diagnostics}
             showStats={showStatsOverlay}
             shortcuts={{

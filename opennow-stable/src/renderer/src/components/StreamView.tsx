@@ -7,6 +7,7 @@ import { getStoreDisplayName, getStoreIconComponent } from "./GameCard";
 interface StreamViewProps {
   videoRef: React.Ref<HTMLVideoElement>;
   audioRef: React.Ref<HTMLAudioElement>;
+  cursorRef: React.Ref<HTMLCanvasElement>;
   stats: StreamDiagnostics;
   showStats: boolean;
   shortcuts: {
@@ -99,6 +100,7 @@ function formatWarningSeconds(value: number | undefined): string | null {
 export function StreamView({
   videoRef,
   audioRef,
+  cursorRef,
   stats,
   showStats,
   shortcuts,
@@ -214,6 +216,7 @@ export function StreamView({
 
   // Local ref for video element to manage focus
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localCursorRef = useRef<HTMLCanvasElement | null>(null);
 
   // Combined ref callback that sets both local and forwarded ref
   const setVideoRef = useCallback((element: HTMLVideoElement | null) => {
@@ -225,6 +228,133 @@ export function StreamView({
       (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
     }
   }, [videoRef]);
+
+  // Cursor canvas ref callback
+  const setCursorRef = useCallback((element: HTMLCanvasElement | null) => {
+    localCursorRef.current = element;
+    if (typeof cursorRef === "function") {
+      cursorRef(element);
+    } else if (cursorRef && "current" in cursorRef) {
+      (cursorRef as React.MutableRefObject<HTMLCanvasElement | null>).current = element;
+    }
+  }, [cursorRef]);
+
+  // Cursor rendering effect
+  useEffect(() => {
+    if (!localCursorRef.current || !stats.cursorVisible) return;
+    
+    const canvas = localCursorRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Get cursor position (server coordinates scaled to viewport)
+    const videoEl = localVideoRef.current;
+    if (!videoEl) return;
+
+    const videoRect = videoEl.getBoundingClientRect();
+    const videoWidth = videoEl.videoWidth || videoRect.width;
+    const videoHeight = videoEl.videoHeight || videoRect.height;
+
+    // Scale server cursor position to video element size
+    const scaleX = videoRect.width / videoWidth;
+    const scaleY = videoRect.height / videoHeight;
+
+    const cursorX = stats.cursorX * scaleX;
+    const cursorY = stats.cursorY * scaleY;
+
+    // Draw cursor based on type
+    ctx.save();
+    
+    switch (stats.cursorType) {
+      case 'arrow':
+        // Standard arrow cursor
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cursorX, cursorY);
+        ctx.lineTo(cursorX, cursorY + 18);
+        ctx.lineTo(cursorX + 4, cursorY + 14);
+        ctx.lineTo(cursorX + 10, cursorY + 20);
+        ctx.lineTo(cursorX + 12, cursorY + 18);
+        ctx.lineTo(cursorX + 6, cursorY + 12);
+        ctx.lineTo(cursorX + 12, cursorY + 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'ibeam':
+        // I-beam text cursor
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        const iwidth = 2;
+        const iheight = 18;
+        ctx.fillRect(cursorX - iwidth/2, cursorY - iheight/2, iwidth, iheight);
+        ctx.strokeRect(cursorX - iwidth/2 - 0.5, cursorY - iheight/2 - 0.5, iwidth + 1, iheight + 1);
+        break;
+      case 'hand':
+        // Hand pointer
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+        break;
+      case 'crosshair':
+        // Crosshair
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        const csize = 10;
+        ctx.beginPath();
+        ctx.moveTo(cursorX - csize, cursorY);
+        ctx.lineTo(cursorX + csize, cursorY);
+        ctx.moveTo(cursorX, cursorY - csize);
+        ctx.lineTo(cursorX, cursorY + csize);
+        ctx.stroke();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        break;
+      case 'wait':
+        // Hourglass/wait cursor
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        const w = 10;
+        const h = 16;
+        ctx.beginPath();
+        ctx.moveTo(cursorX - w/2, cursorY - h/2);
+        ctx.lineTo(cursorX + w/2, cursorY - h/2);
+        ctx.lineTo(cursorX, cursorY);
+        ctx.lineTo(cursorX + w/2, cursorY + h/2);
+        ctx.lineTo(cursorX - w/2, cursorY + h/2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      default:
+        // Default dot cursor
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cursorX, cursorY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    ctx.restore();
+  }, [stats.cursorVisible, stats.cursorX, stats.cursorY, stats.cursorType]);
 
   // Focus video element when stream is ready (not connecting anymore)
   useEffect(() => {
@@ -250,11 +380,30 @@ export function StreamView({
         muted 
         tabIndex={0} 
         className="sv-video"
+        style={{ cursor: stats.cursorVisible ? 'none' : 'default' }}
         onClick={() => {
           // Ensure video has focus when clicked for pointer lock to work
           if (localVideoRef.current && document.activeElement !== localVideoRef.current) {
             localVideoRef.current.focus();
           }
+        }}
+      />
+      {/* Cursor overlay canvas */}
+      <canvas
+        ref={setCursorRef}
+        className="sv-cursor"
+        width={1920}
+        height={1200}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 10,
+          opacity: stats.cursorVisible ? 1 : 0,
+          transition: 'opacity 0.1s ease',
         }}
       />
       <audio ref={audioRef} autoPlay playsInline />

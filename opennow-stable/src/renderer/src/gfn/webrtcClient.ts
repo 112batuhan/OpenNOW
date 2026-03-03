@@ -169,6 +169,12 @@ export interface StreamDiagnostics {
   // Microphone state
   micState: MicState;
   micEnabled: boolean;
+
+  // Cursor state
+  cursorVisible: boolean;
+  cursorX: number;
+  cursorY: number;
+  cursorType: 'arrow' | 'ibeam' | 'hand' | 'crosshair' | 'wait' | 'default';
 }
 
 export interface StreamTimeWarning {
@@ -569,6 +575,10 @@ export class GfnWebRtcClient {
     serverRegion: "",
     micState: "uninitialized",
     micEnabled: false,
+    cursorVisible: false,
+    cursorX: 0,
+    cursorY: 0,
+    cursorType: 'arrow',
   };
 
   constructor(private readonly options: ClientOptions) {
@@ -1484,18 +1494,76 @@ export class GfnWebRtcClient {
   /**
    * Handle server cursor position updates from cursor_channel.
    * The server sends absolute cursor position for server-rendered cursor mode.
+   * Format from official GFN client:
+   * - x, y: cursor position in server screen coordinates (0,0 = top-left)
+   * - visibility: bit 15 of x or separate message may indicate visibility
+   * - cursor type: may be encoded in higher bits
+   * 
+   * The cursor is rendered by the server into the video stream, but if the cursor
+   * appears black, we need to render it ourselves as an overlay.
    */
+  private serverCursorX: number = 0;
+  private serverCursorY: number = 0;
+  private serverCursorVisible: boolean = true;
+  private serverCursorType: 'arrow' | 'ibeam' | 'hand' | 'crosshair' | 'wait' | 'default' = 'arrow';
+
   private handleCursorMessage(data: ArrayBuffer): void {
     try {
       const view = new DataView(data);
-      // Cursor messages are typically simple position updates
-      // Format varies by protocol version, but usually contains x, y coordinates
+      // Cursor messages from server vary in format
+      // Common formats observed:
+      // - 4 bytes: x (int16 BE), y (int16 BE)
+      // - 5 bytes: with visibility/type flags
+      // - 8 bytes: with additional metadata
+      
       if (data.byteLength >= 4) {
-        const x = view.getInt16(0, false); // BE
-        const y = view.getInt16(2, false); // BE
-        this.log(`Server cursor position: x=${x}, y=${y}`);
-        // In server-rendered cursor mode, the cursor is drawn by the server
-        // We may need to hide the local cursor or sync positions
+        // Parse cursor position
+        let x = view.getInt16(0, false); // BE
+        let y = view.getInt16(2, false); // BE
+        
+        // Check for visibility flag in bit 15 (0x8000)
+        // This matches GFN's protocol where cursor position includes visibility
+        let visible = true;
+        let cursorType: typeof this.serverCursorType = 'arrow';
+        
+        if ((x & 0x8000) !== 0) {
+          x = x & 0x7FFF; // Clear visibility flag
+        }
+        if ((y & 0x8000) !== 0) {
+          visible = false;
+          y = y & 0x7FFF;
+        }
+        
+        // Extended format with cursor type
+        if (data.byteLength >= 6) {
+          const flags = view.getUint16(4, false);
+          // Decode cursor type from flags
+          const typeBits = (flags >> 12) & 0xF;
+          switch (typeBits) {
+            case 1: cursorType = 'ibeam'; break;
+            case 2: cursorType = 'hand'; break;
+            case 3: cursorType = 'crosshair'; break;
+            case 4: cursorType = 'wait'; break;
+            default: cursorType = 'arrow'; break;
+          }
+        }
+        
+        this.serverCursorX = x;
+        this.serverCursorY = y;
+        this.serverCursorVisible = visible;
+        this.serverCursorType = cursorType;
+        
+        // Update diagnostics for UI rendering
+        this.diagnostics.cursorX = x;
+        this.diagnostics.cursorY = y;
+        this.diagnostics.cursorVisible = visible;
+        this.diagnostics.cursorType = cursorType;
+        
+        this.log(`Server cursor position: x=${x}, y=${y}, visible=${visible}, type=${cursorType}`);
+        
+        // If cursor is visible, we may need to render it ourselves
+        // because the server-rendered cursor in the video may appear black
+        // This is handled by the UI overlay
       }
     } catch (e) {
       this.log(`Cursor message parse error: ${String(e)}`);
