@@ -1068,6 +1068,7 @@ export function App(): JSX.Element {
   // Play game handler
   const handlePlayGame = useCallback(
     async (game: GameInfo) => {
+      console.log(game);
       if (!selectedProvider) return;
 
       if (launchInFlightRef.current || streamStatus !== "idle") {
@@ -1605,14 +1606,29 @@ export function App(): JSX.Element {
     streamingGame?.title,
   ]);
 
+  // Handling auto log in
   useEffect(() => {
     const isReadyToLogIn = !authSession && !isInitializing;
 
     if (isReadyToLogIn) {
-      console.log("Button is now enabled! Triggering onLogin...");
+      console.log("Initiating auto log in");
       handleLogin();
     }
   }, [authSession, isInitializing]);
+
+  // Handling auto game start
+  useEffect(() => {
+    const targetGame = games.find(
+      (game) => game.title.toLowerCase() === "hell let loose".toLowerCase(),
+    );
+
+    if (targetGame) {
+      console.log("Game found:", targetGame);
+      handlePlayGame(targetGame);
+    } else {
+      console.log("Game not found in the list.");
+    }
+  }, [games]);
 
   // Show login screen if not authenticated
   if (!authSession) {
