@@ -34,7 +34,7 @@ export async function runLoginScript(url: string) {
   const page = await context.newPage();
   await page.goto(url);
   await page.getByRole("button", { name: "Continue" }).click();
-  
+
   const successMessage = page.locator("div", {
     hasText: "Login complete",
   });

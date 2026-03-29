@@ -20,7 +20,11 @@ import {
   type StreamDiagnostics,
   type StreamTimeWarning,
 } from "./gfn/webrtcClient";
-import { formatShortcutForDisplay, isShortcutMatch, normalizeShortcut } from "./shortcuts";
+import {
+  formatShortcutForDisplay,
+  isShortcutMatch,
+  normalizeShortcut,
+} from "./shortcuts";
 import { useControllerNavigation } from "./controllerNavigation";
 
 // UI Components
@@ -33,14 +37,27 @@ import { StreamLoading } from "./components/StreamLoading";
 import { StreamView } from "./components/StreamView";
 
 const codecOptions: VideoCodec[] = ["H264", "H265", "AV1"];
-const resolutionOptions = ["1280x720", "1920x1080", "2560x1440", "3840x2160", "2560x1080", "3440x1440"];
+const resolutionOptions = [
+  "1280x720",
+  "1920x1080",
+  "2560x1440",
+  "3840x2160",
+  "2560x1080",
+  "3440x1440",
+];
 const fpsOptions = [30, 60, 120, 144, 240];
 const SESSION_READY_POLL_INTERVAL_MS = 2000;
 const SESSION_READY_TIMEOUT_MS = 180000;
 
 type GameSource = "main" | "library" | "public";
 type AppPage = "home" | "library" | "settings";
-type StreamStatus = "idle" | "queue" | "setup" | "starting" | "connecting" | "streaming";
+type StreamStatus =
+  | "idle"
+  | "queue"
+  | "setup"
+  | "starting"
+  | "connecting"
+  | "streaming";
 type StreamLoadingStatus = "queue" | "setup" | "starting" | "connecting";
 type ExitPromptState = { open: boolean; gameTitle: string };
 type StreamWarningState = {
@@ -135,7 +152,11 @@ function isSessionLimitError(error: unknown): boolean {
   }
   if (error instanceof Error) {
     const msg = error.message.toUpperCase();
-    return msg.includes("SESSION LIMIT") || msg.includes("INSUFFICIENT_PLAYABILITY") || msg.includes("DUPLICATE SESSION");
+    return (
+      msg.includes("SESSION LIMIT") ||
+      msg.includes("INSUFFICIENT_PLAYABILITY") ||
+      msg.includes("DUPLICATE SESSION")
+    );
   }
   return false;
 }
@@ -168,7 +189,8 @@ function toLoadingStatus(status: StreamStatus): StreamLoadingStatus {
 function toCodeLabel(code: number | undefined): string | undefined {
   if (code === undefined) return undefined;
   if (code === 3237093643) return `SessionLimitExceeded (${code})`;
-  if (code === 3237093718) return `SessionInsufficientPlayabilityLevel (${code})`;
+  if (code === 3237093718)
+    return `SessionInsufficientPlayabilityLevel (${code})`;
   return `GFN Error ${code}`;
 }
 
@@ -180,7 +202,11 @@ function extractLaunchErrorCode(error: unknown): number | undefined {
     }
     if ("statusCode" in error) {
       const statusCode = error.statusCode;
-      if (typeof statusCode === "number" && statusCode > 0 && statusCode < 255) {
+      if (
+        typeof statusCode === "number" &&
+        statusCode > 0 &&
+        statusCode < 255
+      ) {
         return 3237093632 + statusCode;
       }
     }
@@ -195,19 +221,31 @@ function extractLaunchErrorCode(error: unknown): number | undefined {
   return undefined;
 }
 
-function toLaunchErrorState(error: unknown, stage: StreamLoadingStatus): LaunchErrorState {
+function toLaunchErrorState(
+  error: unknown,
+  stage: StreamLoadingStatus,
+): LaunchErrorState {
   const unknownMessage = "The game could not start. Please try again.";
 
   const titleFromError =
-    error && typeof error === "object" && "title" in error && typeof error.title === "string"
+    error &&
+    typeof error === "object" &&
+    "title" in error &&
+    typeof error.title === "string"
       ? error.title.trim()
       : "";
   const descriptionFromError =
-    error && typeof error === "object" && "description" in error && typeof error.description === "string"
+    error &&
+    typeof error === "object" &&
+    "description" in error &&
+    typeof error.description === "string"
       ? error.description.trim()
       : "";
   const statusDescription =
-    error && typeof error === "object" && "statusDescription" in error && typeof error.statusDescription === "string"
+    error &&
+    typeof error === "object" &&
+    "statusDescription" in error &&
+    typeof error.statusDescription === "string"
       ? error.statusDescription.trim()
       : "";
   const messageFromError = error instanceof Error ? error.message.trim() : "";
@@ -223,7 +261,8 @@ function toLaunchErrorState(error: unknown, stage: StreamLoadingStatus): LaunchE
     return {
       stage,
       title: "Duplicate Session Detected",
-      description: "Another session is already running on your account. Close it first or wait for it to timeout, then launch again.",
+      description:
+        "Another session is already running on your account. Close it first or wait for it to timeout, then launch again.",
       codeLabel: toCodeLabel(code),
     };
   }
@@ -231,7 +270,11 @@ function toLaunchErrorState(error: unknown, stage: StreamLoadingStatus): LaunchE
   return {
     stage,
     title: titleFromError || "Launch Failed",
-    description: descriptionFromError || messageFromError || statusDescription || unknownMessage,
+    description:
+      descriptionFromError ||
+      messageFromError ||
+      statusDescription ||
+      unknownMessage,
     codeLabel: toCodeLabel(code),
   };
 }
@@ -244,7 +287,9 @@ export function App(): JSX.Element {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [startupStatusMessage, setStartupStatusMessage] = useState("Restoring saved session...");
+  const [startupStatusMessage, setStartupStatusMessage] = useState(
+    "Restoring saved session...",
+  );
   const [startupRefreshNotice, setStartupRefreshNotice] = useState<{
     tone: "success" | "warn";
     text: string;
@@ -259,7 +304,9 @@ export function App(): JSX.Element {
   const [source, setSource] = useState<GameSource>("main");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGameId, setSelectedGameId] = useState("");
-  const [variantByGameId, setVariantByGameId] = useState<Record<string, string>>({});
+  const [variantByGameId, setVariantByGameId] = useState<
+    Record<string, string>
+  >({});
   const [isLoadingGames, setIsLoadingGames] = useState(false);
 
   // Settings State
@@ -289,37 +336,54 @@ export function App(): JSX.Element {
   });
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [regions, setRegions] = useState<StreamRegion[]>([]);
-  const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionInfo, setSubscriptionInfo] =
+    useState<SubscriptionInfo | null>(null);
 
   // Stream State
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>("idle");
-  const [diagnostics, setDiagnostics] = useState<StreamDiagnostics>(defaultDiagnostics());
+  const [diagnostics, setDiagnostics] =
+    useState<StreamDiagnostics>(defaultDiagnostics());
   const [showStatsOverlay, setShowStatsOverlay] = useState(true);
   const [antiAfkEnabled, setAntiAfkEnabled] = useState(false);
-  const [escHoldReleaseIndicator, setEscHoldReleaseIndicator] = useState<{ visible: boolean; progress: number }>({
+  const [escHoldReleaseIndicator, setEscHoldReleaseIndicator] = useState<{
+    visible: boolean;
+    progress: number;
+  }>({
     visible: false,
     progress: 0,
   });
-  const [exitPrompt, setExitPrompt] = useState<ExitPromptState>({ open: false, gameTitle: "Game" });
+  const [exitPrompt, setExitPrompt] = useState<ExitPromptState>({
+    open: false,
+    gameTitle: "Game",
+  });
   const [streamingGame, setStreamingGame] = useState<GameInfo | null>(null);
   const [queuePosition, setQueuePosition] = useState<number | undefined>();
-  const [navbarActiveSession, setNavbarActiveSession] = useState<ActiveSessionInfo | null>(null);
+  const [navbarActiveSession, setNavbarActiveSession] =
+    useState<ActiveSessionInfo | null>(null);
   const [isResumingNavbarSession, setIsResumingNavbarSession] = useState(false);
   const [launchError, setLaunchError] = useState<LaunchErrorState | null>(null);
-  const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(null);
+  const [sessionStartedAtMs, setSessionStartedAtMs] = useState<number | null>(
+    null,
+  );
   const [sessionElapsedSeconds, setSessionElapsedSeconds] = useState(0);
-  const [streamWarning, setStreamWarning] = useState<StreamWarningState | null>(null);
+  const [streamWarning, setStreamWarning] = useState<StreamWarningState | null>(
+    null,
+  );
 
-  const handleControllerPageNavigate = useCallback((direction: "prev" | "next"): void => {
-    if (!authSession || streamStatus !== "idle") {
-      return;
-    }
-    const currentIndex = APP_PAGE_ORDER.indexOf(currentPage);
-    const step = direction === "next" ? 1 : -1;
-    const nextIndex = (currentIndex + step + APP_PAGE_ORDER.length) % APP_PAGE_ORDER.length;
-    setCurrentPage(APP_PAGE_ORDER[nextIndex]);
-  }, [authSession, currentPage, streamStatus]);
+  const handleControllerPageNavigate = useCallback(
+    (direction: "prev" | "next"): void => {
+      if (!authSession || streamStatus !== "idle") {
+        return;
+      }
+      const currentIndex = APP_PAGE_ORDER.indexOf(currentPage);
+      const step = direction === "next" ? 1 : -1;
+      const nextIndex =
+        (currentIndex + step + APP_PAGE_ORDER.length) % APP_PAGE_ORDER.length;
+      setCurrentPage(APP_PAGE_ORDER[nextIndex]);
+    },
+    [authSession, currentPage, streamStatus],
+  );
 
   const handleControllerBackAction = useCallback((): boolean => {
     if (!authSession || streamStatus !== "idle") {
@@ -346,7 +410,9 @@ export function App(): JSX.Element {
   const hasInitializedRef = useRef(false);
   const regionsRequestRef = useRef(0);
   const launchInFlightRef = useRef(false);
-  const exitPromptResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
+  const exitPromptResolverRef = useRef<((confirmed: boolean) => void) | null>(
+    null,
+  );
 
   // Session ref sync
   useEffect(() => {
@@ -362,7 +428,11 @@ export function App(): JSX.Element {
 
   // Derived state
   const selectedProvider = useMemo(() => {
-    return providers.find((p) => p.idpId === providerIdpId) ?? authSession?.provider ?? null;
+    return (
+      providers.find((p) => p.idpId === providerIdpId) ??
+      authSession?.provider ??
+      null
+    );
   }, [providers, providerIdpId, authSession]);
 
   const effectiveStreamingBaseUrl = useMemo(() => {
@@ -393,8 +463,14 @@ export function App(): JSX.Element {
       return;
     }
     try {
-      const activeSessions = await window.openNow.getActiveSessions(token, effectiveStreamingBaseUrl);
-      const candidate = activeSessions.find((entry) => entry.status === 3 || entry.status === 2) ?? null;
+      const activeSessions = await window.openNow.getActiveSessions(
+        token,
+        effectiveStreamingBaseUrl,
+      );
+      const candidate =
+        activeSessions.find(
+          (entry) => entry.status === 3 || entry.status === 2,
+        ) ?? null;
       setNavbarActiveSession(candidate);
     } catch (error) {
       console.warn("Failed to refresh active sessions:", error);
@@ -431,7 +507,9 @@ export function App(): JSX.Element {
         setSettingsLoaded(true);
 
         // Load providers and session (force refresh on startup restore)
-        setStartupStatusMessage("Restoring saved session and refreshing token...");
+        setStartupStatusMessage(
+          "Restoring saved session and refreshing token...",
+        );
         const [providerList, sessionResult] = await Promise.all([
           window.openNow.getLoginProviders(),
           window.openNow.getAuthSession({ forceRefresh: true }),
@@ -449,9 +527,13 @@ export function App(): JSX.Element {
             tone: "warn",
             text: "Token refresh failed. Using saved session token.",
           });
-          setStartupStatusMessage("Token refresh failed. Continuing with saved session...");
+          setStartupStatusMessage(
+            "Token refresh failed. Continuing with saved session...",
+          );
         } else if (sessionResult.refresh.outcome === "missing_refresh_token") {
-          setStartupStatusMessage("Saved session has no refresh token. Continuing...");
+          setStartupStatusMessage(
+            "Saved session has no refresh token. Continuing...",
+          );
         } else if (persistedSession) {
           setStartupStatusMessage("Session restored.");
         } else {
@@ -463,12 +545,15 @@ export function App(): JSX.Element {
         setProviders(providerList);
         setAuthSession(persistedSession);
 
-        const activeProviderId = persistedSession?.provider?.idpId ?? providerList[0]?.idpId ?? "";
+        const activeProviderId =
+          persistedSession?.provider?.idpId ?? providerList[0]?.idpId ?? "";
         setProviderIdpId(activeProviderId);
 
         if (persistedSession) {
           // Load regions
-          const token = persistedSession.tokens.idToken ?? persistedSession.tokens.accessToken;
+          const token =
+            persistedSession.tokens.idToken ??
+            persistedSession.tokens.accessToken;
           const discovered = await window.openNow.getRegions({ token });
           setRegions(discovered);
 
@@ -483,22 +568,27 @@ export function App(): JSX.Element {
           try {
             const mainGames = await window.openNow.fetchMainGames({
               token,
-              providerStreamingBaseUrl: persistedSession.provider.streamingServiceUrl,
+              providerStreamingBaseUrl:
+                persistedSession.provider.streamingServiceUrl,
             });
             setGames(mainGames);
             setSource("main");
             setSelectedGameId(mainGames[0]?.id ?? "");
             setVariantByGameId(
-              mainGames.reduce((acc, g) => {
-                acc[g.id] = defaultVariantId(g);
-                return acc;
-              }, {} as Record<string, string>)
+              mainGames.reduce(
+                (acc, g) => {
+                  acc[g.id] = defaultVariantId(g);
+                  return acc;
+                },
+                {} as Record<string, string>,
+              ),
             );
 
             // Also load library
             const libGames = await window.openNow.fetchLibraryGames({
               token,
-              providerStreamingBaseUrl: persistedSession.provider.streamingServiceUrl,
+              providerStreamingBaseUrl:
+                persistedSession.provider.streamingServiceUrl,
             });
             setLibraryGames(libGames);
           } catch {
@@ -516,7 +606,9 @@ export function App(): JSX.Element {
         }
       } catch (error) {
         console.error("Initialization failed:", error);
-        setStartupStatusMessage("Session restore failed. Please sign in again.");
+        setStartupStatusMessage(
+          "Session restore failed. Please sign in again.",
+        );
         // Always set isInitializing to false even on error
         setIsInitializing(false);
       }
@@ -530,12 +622,33 @@ export function App(): JSX.Element {
       const parsed = normalizeShortcut(value);
       return parsed.valid ? parsed : normalizeShortcut(fallback);
     };
-    const toggleStats = parseWithFallback(settings.shortcutToggleStats, DEFAULT_SHORTCUTS.shortcutToggleStats);
-    const togglePointerLock = parseWithFallback(settings.shortcutTogglePointerLock, DEFAULT_SHORTCUTS.shortcutTogglePointerLock);
-    const stopStream = parseWithFallback(settings.shortcutStopStream, DEFAULT_SHORTCUTS.shortcutStopStream);
-    const toggleAntiAfk = parseWithFallback(settings.shortcutToggleAntiAfk, DEFAULT_SHORTCUTS.shortcutToggleAntiAfk);
-    const toggleMicrophone = parseWithFallback(settings.shortcutToggleMicrophone, DEFAULT_SHORTCUTS.shortcutToggleMicrophone);
-    return { toggleStats, togglePointerLock, stopStream, toggleAntiAfk, toggleMicrophone };
+    const toggleStats = parseWithFallback(
+      settings.shortcutToggleStats,
+      DEFAULT_SHORTCUTS.shortcutToggleStats,
+    );
+    const togglePointerLock = parseWithFallback(
+      settings.shortcutTogglePointerLock,
+      DEFAULT_SHORTCUTS.shortcutTogglePointerLock,
+    );
+    const stopStream = parseWithFallback(
+      settings.shortcutStopStream,
+      DEFAULT_SHORTCUTS.shortcutStopStream,
+    );
+    const toggleAntiAfk = parseWithFallback(
+      settings.shortcutToggleAntiAfk,
+      DEFAULT_SHORTCUTS.shortcutToggleAntiAfk,
+    );
+    const toggleMicrophone = parseWithFallback(
+      settings.shortcutToggleMicrophone,
+      DEFAULT_SHORTCUTS.shortcutToggleMicrophone,
+    );
+    return {
+      toggleStats,
+      togglePointerLock,
+      stopStream,
+      toggleAntiAfk,
+      toggleMicrophone,
+    };
   }, [
     settings.shortcutToggleStats,
     settings.shortcutTogglePointerLock,
@@ -544,27 +657,40 @@ export function App(): JSX.Element {
     settings.shortcutToggleMicrophone,
   ]);
 
-  const requestEscLockedPointerCapture = useCallback(async (target: HTMLVideoElement) => {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen().catch(() => {});
-    }
+  const requestEscLockedPointerCapture = useCallback(
+    async (target: HTMLVideoElement) => {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen().catch(() => {});
+      }
 
-    const nav = navigator as any;
-    if (document.fullscreenElement && nav.keyboard?.lock) {
-      await nav.keyboard.lock([
-        "Escape", "F11", "BrowserBack", "BrowserForward", "BrowserRefresh",
-      ]).catch(() => {});
-    }
+      const nav = navigator as any;
+      if (document.fullscreenElement && nav.keyboard?.lock) {
+        await nav.keyboard
+          .lock([
+            "Escape",
+            "F11",
+            "BrowserBack",
+            "BrowserForward",
+            "BrowserRefresh",
+          ])
+          .catch(() => {});
+      }
 
-    await (target.requestPointerLock({ unadjustedMovement: true } as any) as unknown as Promise<void>)
-      .catch((err: DOMException) => {
-        if (err.name === "NotSupportedError") {
-          return target.requestPointerLock();
-        }
-        throw err;
-      })
-      .catch(() => {});
-  }, []);
+      await (
+        target.requestPointerLock({
+          unadjustedMovement: true,
+        } as any) as unknown as Promise<void>
+      )
+        .catch((err: DOMException) => {
+          if (err.name === "NotSupportedError") {
+            return target.requestPointerLock();
+          }
+          throw err;
+        })
+        .catch(() => {});
+    },
+    [],
+  );
 
   const resolveExitPrompt = useCallback((confirmed: boolean) => {
     const resolver = exitPromptResolverRef.current;
@@ -573,19 +699,22 @@ export function App(): JSX.Element {
     resolver?.(confirmed);
   }, []);
 
-  const requestExitPrompt = useCallback((gameTitle: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (exitPromptResolverRef.current) {
-        // Close any previous pending prompt to avoid dangling promises.
-        exitPromptResolverRef.current(false);
-      }
-      exitPromptResolverRef.current = resolve;
-      setExitPrompt({
-        open: true,
-        gameTitle: gameTitle || "this game",
+  const requestExitPrompt = useCallback(
+    (gameTitle: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        if (exitPromptResolverRef.current) {
+          // Close any previous pending prompt to avoid dangling promises.
+          exitPromptResolverRef.current(false);
+        }
+        exitPromptResolverRef.current = resolve;
+        setExitPrompt({
+          open: true,
+          gameTitle: gameTitle || "this game",
+        });
       });
-    });
-  }, []);
+    },
+    [],
+  );
 
   const handleExitPromptConfirm = useCallback(() => {
     resolveExitPrompt(true);
@@ -630,12 +759,18 @@ export function App(): JSX.Element {
 
   // Restore focus to video element when navigating away from Settings during streaming
   useEffect(() => {
-    if (streamStatus === "streaming" && currentPage !== "settings" && videoRef.current) {
+    if (
+      streamStatus === "streaming" &&
+      currentPage !== "settings" &&
+      videoRef.current
+    ) {
       // Small delay to let React finish rendering the new page
       const timer = window.setTimeout(() => {
         if (videoRef.current && document.activeElement !== videoRef.current) {
           videoRef.current.focus();
-          console.log("[App] Restored focus to video element after leaving Settings");
+          console.log(
+            "[App] Restored focus to video element after leaving Settings",
+          );
         }
       }, 50);
       return () => clearTimeout(timer);
@@ -649,7 +784,10 @@ export function App(): JSX.Element {
     }
 
     const updateElapsed = () => {
-      const elapsed = Math.max(0, Math.floor((Date.now() - sessionStartedAtMs) / 1000));
+      const elapsed = Math.max(
+        0,
+        Math.floor((Date.now() - sessionStartedAtMs) / 1000),
+      );
       setSessionElapsedSeconds(elapsed);
     };
 
@@ -669,105 +807,123 @@ export function App(): JSX.Element {
 
   // Signaling events
   useEffect(() => {
-    const unsubscribe = window.openNow.onSignalingEvent(async (event: MainToRendererSignalingEvent) => {
-      console.log(`[App] Signaling event: ${event.type}`, event.type === "offer" ? `(SDP ${event.sdp.length} chars)` : "", event.type === "remote-ice" ? event.candidate : "");
-      try {
-        if (event.type === "offer") {
-          const activeSession = sessionRef.current;
-          if (!activeSession) {
-            console.warn("[App] Received offer but no active session in sessionRef!");
-            return;
-          }
-          console.log("[App] Active session for offer:", JSON.stringify({
-            sessionId: activeSession.sessionId,
-            serverIp: activeSession.serverIp,
-            signalingServer: activeSession.signalingServer,
-            mediaConnectionInfo: activeSession.mediaConnectionInfo,
-            iceServersCount: activeSession.iceServers?.length,
-          }));
-
-          if (!clientRef.current && videoRef.current && audioRef.current) {
-            clientRef.current = new GfnWebRtcClient({
-              videoElement: videoRef.current,
-              audioElement: audioRef.current,
-              microphoneMode: settings.microphoneMode,
-              microphoneDeviceId: settings.microphoneDeviceId || undefined,
-              onLog: (line: string) => console.log(`[WebRTC] ${line}`),
-              onStats: (stats) => setDiagnostics(stats),
-              onEscHoldProgress: (visible, progress) => {
-                setEscHoldReleaseIndicator({ visible, progress });
-              },
-              onTimeWarning: (warning) => {
-                setStreamWarning({
-                  code: warning.code,
-                  message: warningMessage(warning.code),
-                  tone: warningTone(warning.code),
-                  secondsLeft: warning.secondsLeft,
-                });
-              },
-              onMicStateChange: (state) => {
-                console.log(`[App] Mic state: ${state.state}${state.deviceLabel ? ` (${state.deviceLabel})` : ""}`);
-              },
-            });
-            // Auto-start microphone if mode is enabled
-            if (settings.microphoneMode !== "disabled") {
-              void clientRef.current.startMicrophone();
+    const unsubscribe = window.openNow.onSignalingEvent(
+      async (event: MainToRendererSignalingEvent) => {
+        console.log(
+          `[App] Signaling event: ${event.type}`,
+          event.type === "offer" ? `(SDP ${event.sdp.length} chars)` : "",
+          event.type === "remote-ice" ? event.candidate : "",
+        );
+        try {
+          if (event.type === "offer") {
+            const activeSession = sessionRef.current;
+            if (!activeSession) {
+              console.warn(
+                "[App] Received offer but no active session in sessionRef!",
+              );
+              return;
             }
-          }
+            console.log(
+              "[App] Active session for offer:",
+              JSON.stringify({
+                sessionId: activeSession.sessionId,
+                serverIp: activeSession.serverIp,
+                signalingServer: activeSession.signalingServer,
+                mediaConnectionInfo: activeSession.mediaConnectionInfo,
+                iceServersCount: activeSession.iceServers?.length,
+              }),
+            );
 
-          if (clientRef.current) {
-            await clientRef.current.handleOffer(event.sdp, activeSession, {
-              codec: settings.codec,
-              colorQuality: settings.colorQuality,
-              resolution: settings.resolution,
-              fps: settings.fps,
-              maxBitrateKbps: settings.maxBitrateMbps * 1000,
-            });
+            if (!clientRef.current && videoRef.current && audioRef.current) {
+              clientRef.current = new GfnWebRtcClient({
+                videoElement: videoRef.current,
+                audioElement: audioRef.current,
+                microphoneMode: settings.microphoneMode,
+                microphoneDeviceId: settings.microphoneDeviceId || undefined,
+                onLog: (line: string) => console.log(`[WebRTC] ${line}`),
+                onStats: (stats) => setDiagnostics(stats),
+                onEscHoldProgress: (visible, progress) => {
+                  setEscHoldReleaseIndicator({ visible, progress });
+                },
+                onTimeWarning: (warning) => {
+                  setStreamWarning({
+                    code: warning.code,
+                    message: warningMessage(warning.code),
+                    tone: warningTone(warning.code),
+                    secondsLeft: warning.secondsLeft,
+                  });
+                },
+                onMicStateChange: (state) => {
+                  console.log(
+                    `[App] Mic state: ${state.state}${state.deviceLabel ? ` (${state.deviceLabel})` : ""}`,
+                  );
+                },
+              });
+              // Auto-start microphone if mode is enabled
+              if (settings.microphoneMode !== "disabled") {
+                void clientRef.current.startMicrophone();
+              }
+            }
+
+            if (clientRef.current) {
+              await clientRef.current.handleOffer(event.sdp, activeSession, {
+                codec: settings.codec,
+                colorQuality: settings.colorQuality,
+                resolution: settings.resolution,
+                fps: settings.fps,
+                maxBitrateKbps: settings.maxBitrateMbps * 1000,
+              });
+              setLaunchError(null);
+              setStreamStatus("streaming");
+              setSessionStartedAtMs((current) => current ?? Date.now());
+            }
+          } else if (event.type === "remote-ice") {
+            await clientRef.current?.addRemoteCandidate(event.candidate);
+          } else if (event.type === "disconnected") {
+            console.warn("Signaling disconnected:", event.reason);
+            clientRef.current?.dispose();
+            clientRef.current = null;
+            setStreamStatus("idle");
+            setSession(null);
+            setStreamingGame(null);
             setLaunchError(null);
-            setStreamStatus("streaming");
-            setSessionStartedAtMs((current) => current ?? Date.now());
+            setSessionStartedAtMs(null);
+            setSessionElapsedSeconds(0);
+            setStreamWarning(null);
+            setEscHoldReleaseIndicator({ visible: false, progress: 0 });
+            setDiagnostics(defaultDiagnostics());
+            launchInFlightRef.current = false;
+          } else if (event.type === "error") {
+            console.error("Signaling error:", event.message);
           }
-        } else if (event.type === "remote-ice") {
-          await clientRef.current?.addRemoteCandidate(event.candidate);
-        } else if (event.type === "disconnected") {
-          console.warn("Signaling disconnected:", event.reason);
-          clientRef.current?.dispose();
-          clientRef.current = null;
-          setStreamStatus("idle");
-          setSession(null);
-          setStreamingGame(null);
-          setLaunchError(null);
-          setSessionStartedAtMs(null);
-          setSessionElapsedSeconds(0);
-          setStreamWarning(null);
-          setEscHoldReleaseIndicator({ visible: false, progress: 0 });
-          setDiagnostics(defaultDiagnostics());
-          launchInFlightRef.current = false;
-        } else if (event.type === "error") {
-          console.error("Signaling error:", event.message);
+        } catch (error) {
+          console.error("Signaling event error:", error);
         }
-      } catch (error) {
-        console.error("Signaling event error:", error);
-      }
-    });
+      },
+    );
 
     return () => unsubscribe();
   }, [settings]);
 
   // Save settings when changed
-  const updateSetting = useCallback(async <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    if (settingsLoaded) {
-      await window.openNow.setSetting(key, value);
-    }
-  }, [settingsLoaded]);
+  const updateSetting = useCallback(
+    async <K extends keyof Settings>(key: K, value: Settings[K]) => {
+      setSettings((prev) => ({ ...prev, [key]: value }));
+      if (settingsLoaded) {
+        await window.openNow.setSetting(key, value);
+      }
+    },
+    [settingsLoaded],
+  );
 
   // Login handler
   const handleLogin = useCallback(async () => {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      const session = await window.openNow.login({ providerIdpId: providerIdpId || undefined });
+      const session = await window.openNow.login({
+        providerIdpId: providerIdpId || undefined,
+      });
       setAuthSession(session);
       setProviderIdpId(session.provider.idpId);
 
@@ -822,159 +978,62 @@ export function App(): JSX.Element {
   }, []);
 
   // Load games handler
-  const loadGames = useCallback(async (targetSource: GameSource) => {
-    setIsLoadingGames(true);
-    try {
-      const token = authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
-      const baseUrl = effectiveStreamingBaseUrl;
+  const loadGames = useCallback(
+    async (targetSource: GameSource) => {
+      setIsLoadingGames(true);
+      try {
+        const token =
+          authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
+        const baseUrl = effectiveStreamingBaseUrl;
 
-      let result: GameInfo[] = [];
-      if (targetSource === "main" && token) {
-        result = await window.openNow.fetchMainGames({ token, providerStreamingBaseUrl: baseUrl });
-      } else if (targetSource === "library" && token) {
-        result = await window.openNow.fetchLibraryGames({ token, providerStreamingBaseUrl: baseUrl });
-        setLibraryGames(result);
-      } else if (targetSource === "public") {
-        result = await window.openNow.fetchPublicGames();
-      }
-
-      if (targetSource !== "library") {
-        setGames(result);
-        setSource(targetSource);
-        setSelectedGameId(result[0]?.id ?? "");
-      }
-    } catch (error) {
-      console.error("Failed to load games:", error);
-    } finally {
-      setIsLoadingGames(false);
-    }
-  }, [authSession, effectiveStreamingBaseUrl]);
-
-  const claimAndConnectSession = useCallback(async (existingSession: ActiveSessionInfo): Promise<void> => {
-    const token = authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
-    if (!token) {
-      throw new Error("Missing token for session resume");
-    }
-    if (!existingSession.serverIp) {
-      throw new Error("Active session is missing server address. Start the game again to create a new session.");
-    }
-
-    const claimed = await window.openNow.claimSession({
-      token,
-      streamingBaseUrl: effectiveStreamingBaseUrl,
-      serverIp: existingSession.serverIp,
-      sessionId: existingSession.sessionId,
-      settings: {
-        resolution: settings.resolution,
-        fps: settings.fps,
-        maxBitrateMbps: settings.maxBitrateMbps,
-        codec: settings.codec,
-        colorQuality: settings.colorQuality,
-      },
-    });
-
-    console.log("Claimed session:", {
-      sessionId: claimed.sessionId,
-      signalingServer: claimed.signalingServer,
-      signalingUrl: claimed.signalingUrl,
-      status: claimed.status,
-    });
-
-    await sleep(1000);
-
-    setSession(claimed);
-    sessionRef.current = claimed;
-    setQueuePosition(undefined);
-    setStreamStatus("connecting");
-    await window.openNow.connectSignaling({
-      sessionId: claimed.sessionId,
-      signalingServer: claimed.signalingServer,
-      signalingUrl: claimed.signalingUrl,
-    });
-  }, [authSession, effectiveStreamingBaseUrl, settings]);
-
-  // Play game handler
-  const handlePlayGame = useCallback(async (game: GameInfo) => {
-    if (!selectedProvider) return;
-
-    if (launchInFlightRef.current || streamStatus !== "idle") {
-      console.warn("Ignoring play request: launch already in progress or stream not idle", {
-        inFlight: launchInFlightRef.current,
-        streamStatus,
-      });
-      return;
-    }
-
-    launchInFlightRef.current = true;
-    let loadingStep: StreamLoadingStatus = "queue";
-    const updateLoadingStep = (next: StreamLoadingStatus): void => {
-      loadingStep = next;
-      setStreamStatus(next);
-    };
-
-    setSessionStartedAtMs(Date.now());
-    setSessionElapsedSeconds(0);
-    setStreamWarning(null);
-    setLaunchError(null);
-    setStreamingGame(game);
-    updateLoadingStep("queue");
-    setQueuePosition(undefined);
-
-    try {
-      const token = authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
-      const selectedVariantId = variantByGameId[game.id] ?? defaultVariantId(game);
-
-      // Resolve appId
-      let appId: string | null = null;
-      if (isNumericId(selectedVariantId)) {
-        appId = selectedVariantId;
-      } else if (isNumericId(game.launchAppId)) {
-        appId = game.launchAppId;
-      }
-
-      if (!appId && token) {
-        try {
-          const resolved = await window.openNow.resolveLaunchAppId({
+        let result: GameInfo[] = [];
+        if (targetSource === "main" && token) {
+          result = await window.openNow.fetchMainGames({
             token,
-            providerStreamingBaseUrl: effectiveStreamingBaseUrl,
-            appIdOrUuid: game.uuid ?? selectedVariantId,
+            providerStreamingBaseUrl: baseUrl,
           });
-          if (resolved && isNumericId(resolved)) {
-            appId = resolved;
-          }
-        } catch {
-          // Ignore resolution errors
+        } else if (targetSource === "library" && token) {
+          result = await window.openNow.fetchLibraryGames({
+            token,
+            providerStreamingBaseUrl: baseUrl,
+          });
+          setLibraryGames(result);
+        } else if (targetSource === "public") {
+          result = await window.openNow.fetchPublicGames();
         }
-      }
 
-      if (!appId) {
-        throw new Error("Could not resolve numeric appId for this game");
-      }
-
-      // Check for active sessions first
-      if (token) {
-        try {
-          const activeSessions = await window.openNow.getActiveSessions(token, effectiveStreamingBaseUrl);
-          if (activeSessions.length > 0) {
-            const existingSession = activeSessions[0];
-            await claimAndConnectSession(existingSession);
-            setNavbarActiveSession(null);
-            return;
-          }
-        } catch (error) {
-          console.error("Failed to claim/resume session:", error);
-          // Continue to create new session
+        if (targetSource !== "library") {
+          setGames(result);
+          setSource(targetSource);
+          setSelectedGameId(result[0]?.id ?? "");
         }
+      } catch (error) {
+        console.error("Failed to load games:", error);
+      } finally {
+        setIsLoadingGames(false);
+      }
+    },
+    [authSession, effectiveStreamingBaseUrl],
+  );
+
+  const claimAndConnectSession = useCallback(
+    async (existingSession: ActiveSessionInfo): Promise<void> => {
+      const token =
+        authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
+      if (!token) {
+        throw new Error("Missing token for session resume");
+      }
+      if (!existingSession.serverIp) {
+        throw new Error(
+          "Active session is missing server address. Start the game again to create a new session.",
+        );
       }
 
-      // Create new session
-      const newSession = await window.openNow.createSession({
-        token: token || undefined,
+      const claimed = await window.openNow.claimSession({
+        token,
         streamingBaseUrl: effectiveStreamingBaseUrl,
-        appId,
-        internalTitle: game.title,
-        accountLinked: game.playType !== "INSTALL_TO_PLAY",
-        zone: "prod",
+        serverIp: existingSession.serverIp,
+        sessionId: existingSession.sessionId,
         settings: {
           resolution: settings.resolution,
           fps: settings.fps,
@@ -984,115 +1043,245 @@ export function App(): JSX.Element {
         },
       });
 
-      setSession(newSession);
-      setQueuePosition(newSession.queuePosition);
+      console.log("Claimed session:", {
+        sessionId: claimed.sessionId,
+        signalingServer: claimed.signalingServer,
+        signalingUrl: claimed.signalingUrl,
+        status: claimed.status,
+      });
 
-      // Poll for readiness.
-      // Queue mode (>1): no timeout - users wait indefinitely and see position updates.
-      // Setup/Starting mode (0, 1, or undefined): 180s timeout applies - machine is starting.
-      let finalSession: SessionInfo | null = null;
-      // Only in queue mode if queuePosition > 1 (actually waiting in line)
-      // queuePosition 0 or 1 means machine is being allocated, not queue wait
-      let isInQueueMode = (newSession.queuePosition ?? 0) > 1;
-      let timeoutStartAttempt = 1;
-      const maxAttempts = Math.ceil(SESSION_READY_TIMEOUT_MS / SESSION_READY_POLL_INTERVAL_MS);
-      let attempt = 0;
+      await sleep(1000);
 
-      while (true) {
-        attempt++;
-        await sleep(SESSION_READY_POLL_INTERVAL_MS);
+      setSession(claimed);
+      sessionRef.current = claimed;
+      setQueuePosition(undefined);
+      setStreamStatus("connecting");
+      await window.openNow.connectSignaling({
+        sessionId: claimed.sessionId,
+        signalingServer: claimed.signalingServer,
+        signalingUrl: claimed.signalingUrl,
+      });
+    },
+    [authSession, effectiveStreamingBaseUrl, settings],
+  );
 
-        const polled = await window.openNow.pollSession({
-          token: token || undefined,
-          streamingBaseUrl: newSession.streamingBaseUrl ?? effectiveStreamingBaseUrl,
-          serverIp: newSession.serverIp,
-          zone: newSession.zone,
-          sessionId: newSession.sessionId,
-        });
+  // Play game handler
+  const handlePlayGame = useCallback(
+    async (game: GameInfo) => {
+      if (!selectedProvider) return;
 
-        setSession(polled);
-        setQueuePosition(polled.queuePosition);
-
-        // Check if queue just cleared - transition from queue mode to setup mode
-        const wasInQueueMode = isInQueueMode;
-        // Queue mode only when position > 1 (actually waiting behind others)
-        // Position 0 or 1 means machine allocation is starting
-        isInQueueMode = (polled.queuePosition ?? 0) > 1;
-        if (wasInQueueMode && !isInQueueMode) {
-          // Queue just cleared, start timeout counting from now
-          timeoutStartAttempt = attempt;
-        }
-
-        console.log(
-          `Poll attempt ${attempt}: status=${polled.status}, queuePosition=${polled.queuePosition ?? "n/a"}, serverIp=${polled.serverIp}, queueMode=${isInQueueMode}`,
+      if (launchInFlightRef.current || streamStatus !== "idle") {
+        console.warn(
+          "Ignoring play request: launch already in progress or stream not idle",
+          {
+            inFlight: launchInFlightRef.current,
+            streamStatus,
+          },
         );
-
-        if (isSessionReadyForConnect(polled.status)) {
-          finalSession = polled;
-          break;
-        }
-
-        // Update status based on session state
-        if (isInQueueMode) {
-          updateLoadingStep("queue");
-        } else if (polled.status === 1) {
-          updateLoadingStep("setup");
-        }
-
-        // Only check timeout when NOT in queue mode (i.e., during setup/starting)
-        if (!isInQueueMode && attempt - timeoutStartAttempt >= maxAttempts) {
-          throw new Error(`Session did not become ready in time (${Math.round(SESSION_READY_TIMEOUT_MS / 1000)}s)`);
-        }
+        return;
       }
 
-      // finalSession is guaranteed to be set here (we only exit the loop via break when session is ready)
-      // Timeout only applies during setup/starting phase, not during queue wait
+      launchInFlightRef.current = true;
+      let loadingStep: StreamLoadingStatus = "queue";
+      const updateLoadingStep = (next: StreamLoadingStatus): void => {
+        loadingStep = next;
+        setStreamStatus(next);
+      };
 
-      setQueuePosition(undefined);
-      updateLoadingStep("connecting");
-
-      // Use the polled session data which has the latest signaling info
-      const sessionToConnect = sessionRef.current ?? finalSession ?? newSession;
-      console.log("Connecting signaling with:", {
-        sessionId: sessionToConnect.sessionId,
-        signalingServer: sessionToConnect.signalingServer,
-        signalingUrl: sessionToConnect.signalingUrl,
-        status: sessionToConnect.status,
-      });
-
-      await window.openNow.connectSignaling({
-        sessionId: sessionToConnect.sessionId,
-        signalingServer: sessionToConnect.signalingServer,
-        signalingUrl: sessionToConnect.signalingUrl,
-      });
-    } catch (error) {
-      console.error("Launch failed:", error);
-      setLaunchError(toLaunchErrorState(error, loadingStep));
-      await window.openNow.disconnectSignaling().catch(() => {});
-      clientRef.current?.dispose();
-      clientRef.current = null;
-      setSession(null);
-      setStreamStatus("idle");
-      setQueuePosition(undefined);
-      setSessionStartedAtMs(null);
+      setSessionStartedAtMs(Date.now());
       setSessionElapsedSeconds(0);
       setStreamWarning(null);
-      setEscHoldReleaseIndicator({ visible: false, progress: 0 });
-      setDiagnostics(defaultDiagnostics());
-      void refreshNavbarActiveSession();
-    } finally {
-      launchInFlightRef.current = false;
-    }
-  }, [
-    authSession,
-    claimAndConnectSession,
-    effectiveStreamingBaseUrl,
-    refreshNavbarActiveSession,
-    selectedProvider,
-    settings,
-    streamStatus,
-    variantByGameId,
-  ]);
+      setLaunchError(null);
+      setStreamingGame(game);
+      updateLoadingStep("queue");
+      setQueuePosition(undefined);
+
+      try {
+        const token =
+          authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
+        const selectedVariantId =
+          variantByGameId[game.id] ?? defaultVariantId(game);
+
+        // Resolve appId
+        let appId: string | null = null;
+        if (isNumericId(selectedVariantId)) {
+          appId = selectedVariantId;
+        } else if (isNumericId(game.launchAppId)) {
+          appId = game.launchAppId;
+        }
+
+        if (!appId && token) {
+          try {
+            const resolved = await window.openNow.resolveLaunchAppId({
+              token,
+              providerStreamingBaseUrl: effectiveStreamingBaseUrl,
+              appIdOrUuid: game.uuid ?? selectedVariantId,
+            });
+            if (resolved && isNumericId(resolved)) {
+              appId = resolved;
+            }
+          } catch {
+            // Ignore resolution errors
+          }
+        }
+
+        if (!appId) {
+          throw new Error("Could not resolve numeric appId for this game");
+        }
+
+        // Check for active sessions first
+        if (token) {
+          try {
+            const activeSessions = await window.openNow.getActiveSessions(
+              token,
+              effectiveStreamingBaseUrl,
+            );
+            if (activeSessions.length > 0) {
+              const existingSession = activeSessions[0];
+              await claimAndConnectSession(existingSession);
+              setNavbarActiveSession(null);
+              return;
+            }
+          } catch (error) {
+            console.error("Failed to claim/resume session:", error);
+            // Continue to create new session
+          }
+        }
+
+        // Create new session
+        const newSession = await window.openNow.createSession({
+          token: token || undefined,
+          streamingBaseUrl: effectiveStreamingBaseUrl,
+          appId,
+          internalTitle: game.title,
+          accountLinked: game.playType !== "INSTALL_TO_PLAY",
+          zone: "prod",
+          settings: {
+            resolution: settings.resolution,
+            fps: settings.fps,
+            maxBitrateMbps: settings.maxBitrateMbps,
+            codec: settings.codec,
+            colorQuality: settings.colorQuality,
+          },
+        });
+
+        setSession(newSession);
+        setQueuePosition(newSession.queuePosition);
+
+        // Poll for readiness.
+        // Queue mode (>1): no timeout - users wait indefinitely and see position updates.
+        // Setup/Starting mode (0, 1, or undefined): 180s timeout applies - machine is starting.
+        let finalSession: SessionInfo | null = null;
+        // Only in queue mode if queuePosition > 1 (actually waiting in line)
+        // queuePosition 0 or 1 means machine is being allocated, not queue wait
+        let isInQueueMode = (newSession.queuePosition ?? 0) > 1;
+        let timeoutStartAttempt = 1;
+        const maxAttempts = Math.ceil(
+          SESSION_READY_TIMEOUT_MS / SESSION_READY_POLL_INTERVAL_MS,
+        );
+        let attempt = 0;
+
+        while (true) {
+          attempt++;
+          await sleep(SESSION_READY_POLL_INTERVAL_MS);
+
+          const polled = await window.openNow.pollSession({
+            token: token || undefined,
+            streamingBaseUrl:
+              newSession.streamingBaseUrl ?? effectiveStreamingBaseUrl,
+            serverIp: newSession.serverIp,
+            zone: newSession.zone,
+            sessionId: newSession.sessionId,
+          });
+
+          setSession(polled);
+          setQueuePosition(polled.queuePosition);
+
+          // Check if queue just cleared - transition from queue mode to setup mode
+          const wasInQueueMode = isInQueueMode;
+          // Queue mode only when position > 1 (actually waiting behind others)
+          // Position 0 or 1 means machine allocation is starting
+          isInQueueMode = (polled.queuePosition ?? 0) > 1;
+          if (wasInQueueMode && !isInQueueMode) {
+            // Queue just cleared, start timeout counting from now
+            timeoutStartAttempt = attempt;
+          }
+
+          console.log(
+            `Poll attempt ${attempt}: status=${polled.status}, queuePosition=${polled.queuePosition ?? "n/a"}, serverIp=${polled.serverIp}, queueMode=${isInQueueMode}`,
+          );
+
+          if (isSessionReadyForConnect(polled.status)) {
+            finalSession = polled;
+            break;
+          }
+
+          // Update status based on session state
+          if (isInQueueMode) {
+            updateLoadingStep("queue");
+          } else if (polled.status === 1) {
+            updateLoadingStep("setup");
+          }
+
+          // Only check timeout when NOT in queue mode (i.e., during setup/starting)
+          if (!isInQueueMode && attempt - timeoutStartAttempt >= maxAttempts) {
+            throw new Error(
+              `Session did not become ready in time (${Math.round(SESSION_READY_TIMEOUT_MS / 1000)}s)`,
+            );
+          }
+        }
+
+        // finalSession is guaranteed to be set here (we only exit the loop via break when session is ready)
+        // Timeout only applies during setup/starting phase, not during queue wait
+
+        setQueuePosition(undefined);
+        updateLoadingStep("connecting");
+
+        // Use the polled session data which has the latest signaling info
+        const sessionToConnect =
+          sessionRef.current ?? finalSession ?? newSession;
+        console.log("Connecting signaling with:", {
+          sessionId: sessionToConnect.sessionId,
+          signalingServer: sessionToConnect.signalingServer,
+          signalingUrl: sessionToConnect.signalingUrl,
+          status: sessionToConnect.status,
+        });
+
+        await window.openNow.connectSignaling({
+          sessionId: sessionToConnect.sessionId,
+          signalingServer: sessionToConnect.signalingServer,
+          signalingUrl: sessionToConnect.signalingUrl,
+        });
+      } catch (error) {
+        console.error("Launch failed:", error);
+        setLaunchError(toLaunchErrorState(error, loadingStep));
+        await window.openNow.disconnectSignaling().catch(() => {});
+        clientRef.current?.dispose();
+        clientRef.current = null;
+        setSession(null);
+        setStreamStatus("idle");
+        setQueuePosition(undefined);
+        setSessionStartedAtMs(null);
+        setSessionElapsedSeconds(0);
+        setStreamWarning(null);
+        setEscHoldReleaseIndicator({ visible: false, progress: 0 });
+        setDiagnostics(defaultDiagnostics());
+        void refreshNavbarActiveSession();
+      } finally {
+        launchInFlightRef.current = false;
+      }
+    },
+    [
+      authSession,
+      claimAndConnectSession,
+      effectiveStreamingBaseUrl,
+      refreshNavbarActiveSession,
+      selectedProvider,
+      settings,
+      streamStatus,
+      variantByGameId,
+    ],
+  );
 
   const handleResumeFromNavbar = useCallback(async () => {
     if (!selectedProvider || !navbarActiveSession || isResumingNavbarSession) {
@@ -1156,7 +1345,8 @@ export function App(): JSX.Element {
 
       const current = sessionRef.current;
       if (current) {
-        const token = authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
+        const token =
+          authSession?.tokens.idToken ?? authSession?.tokens.accessToken;
         await window.openNow.stopSession({
           token: token || undefined,
           streamingBaseUrl: current.streamingBaseUrl,
@@ -1222,17 +1412,23 @@ export function App(): JSX.Element {
     }
 
     await handleStopStream();
-  }, [handleStopStream, releasePointerLockIfNeeded, requestExitPrompt, streamStatus, streamingGame?.title]);
+  }, [
+    handleStopStream,
+    releasePointerLockIfNeeded,
+    requestExitPrompt,
+    streamStatus,
+    streamingGame?.title,
+  ]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      const isTyping = !!target && (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      );
+      const isTyping =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
       if (isTyping) {
         return;
       }
@@ -1252,7 +1448,10 @@ export function App(): JSX.Element {
         return;
       }
 
-      const isPasteShortcut = e.key.toLowerCase() === "v" && !e.altKey && (isMac ? e.metaKey : e.ctrlKey);
+      const isPasteShortcut =
+        e.key.toLowerCase() === "v" &&
+        !e.altKey &&
+        (isMac ? e.metaKey : e.ctrlKey);
       if (streamStatus === "streaming" && isPasteShortcut) {
         // Always stop local/browser paste behavior while streaming.
         // If clipboard paste is enabled, send clipboard text into the stream.
@@ -1271,7 +1470,10 @@ export function App(): JSX.Element {
                 return;
               }
             } catch (error) {
-              console.warn("Clipboard read failed, falling back to paste shortcut:", error);
+              console.warn(
+                "Clipboard read failed, falling back to paste shortcut:",
+                error,
+              );
             }
 
             client.sendPasteShortcut(isMac);
@@ -1389,11 +1591,28 @@ export function App(): JSX.Element {
     if (mappedTitle) {
       return mappedTitle;
     }
-    if (session?.sessionId === navbarActiveSession.sessionId && streamingGame?.title) {
+    if (
+      session?.sessionId === navbarActiveSession.sessionId &&
+      streamingGame?.title
+    ) {
       return streamingGame.title;
     }
     return null;
-  }, [gameTitleByAppId, navbarActiveSession, session?.sessionId, streamingGame?.title]);
+  }, [
+    gameTitleByAppId,
+    navbarActiveSession,
+    session?.sessionId,
+    streamingGame?.title,
+  ]);
+
+  useEffect(() => {
+    const isReadyToLogIn = !authSession && !isInitializing;
+
+    if (isReadyToLogIn) {
+      console.log("Button is now enabled! Triggering onLogin...");
+      handleLogin();
+    }
+  }, [authSession, isInitializing]);
 
   // Show login screen if not authenticated
   if (!authSession) {
@@ -1424,7 +1643,9 @@ export function App(): JSX.Element {
 
   // Show stream lifecycle (waiting/connecting/streaming/failure)
   if (showLaunchOverlay) {
-    const loadingStatus = launchError ? launchError.stage : toLoadingStatus(streamStatus);
+    const loadingStatus = launchError
+      ? launchError.stage
+      : toLoadingStatus(streamStatus);
     return (
       <>
         {streamStatus !== "idle" && (
@@ -1434,10 +1655,22 @@ export function App(): JSX.Element {
             stats={diagnostics}
             showStats={showStatsOverlay}
             shortcuts={{
-              toggleStats: formatShortcutForDisplay(settings.shortcutToggleStats, isMac),
-              togglePointerLock: formatShortcutForDisplay(settings.shortcutTogglePointerLock, isMac),
-              stopStream: formatShortcutForDisplay(settings.shortcutStopStream, isMac),
-              toggleMicrophone: formatShortcutForDisplay(settings.shortcutToggleMicrophone, isMac),
+              toggleStats: formatShortcutForDisplay(
+                settings.shortcutToggleStats,
+                isMac,
+              ),
+              togglePointerLock: formatShortcutForDisplay(
+                settings.shortcutTogglePointerLock,
+                isMac,
+              ),
+              stopStream: formatShortcutForDisplay(
+                settings.shortcutStopStream,
+                isMac,
+              ),
+              toggleMicrophone: formatShortcutForDisplay(
+                settings.shortcutToggleMicrophone,
+                isMac,
+              ),
             }}
             hideStreamButtons={settings.hideStreamButtons}
             serverRegion={session?.serverIp}
@@ -1447,7 +1680,9 @@ export function App(): JSX.Element {
             exitPrompt={exitPrompt}
             sessionElapsedSeconds={sessionElapsedSeconds}
             sessionClockShowEveryMinutes={settings.sessionClockShowEveryMinutes}
-            sessionClockShowDurationSeconds={settings.sessionClockShowDurationSeconds}
+            sessionClockShowDurationSeconds={
+              settings.sessionClockShowDurationSeconds
+            }
             streamWarning={streamWarning}
             isConnecting={streamStatus === "connecting"}
             gameTitle={streamingGame?.title ?? "Game"}
@@ -1507,7 +1742,9 @@ export function App(): JSX.Element {
   return (
     <div className="app-container">
       {startupRefreshNotice && (
-        <div className={`auth-refresh-notice auth-refresh-notice--${startupRefreshNotice.tone}`}>
+        <div
+          className={`auth-refresh-notice auth-refresh-notice--${startupRefreshNotice.tone}`}
+        >
           {startupRefreshNotice.text}
         </div>
       )}
