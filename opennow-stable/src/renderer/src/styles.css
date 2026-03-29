@@ -2187,6 +2187,24 @@ body.controller-mode {
   letter-spacing: 0.03em;
 }
 
+.sv-auto-click {
+  position: fixed; top: 50%; left: 20px;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 11px;
+  background: rgba(10, 10, 12, 0.92);
+  border: 1px solid var(--panel-border); border-radius: var(--r-md);
+  z-index: 1001; color: var(--success);
+}
+
+.sv-auto-click--stacked {
+  top: 56px;
+}
+
+.sv-afk-label {
+  font-size: 0.72rem; font-weight: 700; color: var(--ink);
+  letter-spacing: 0.03em;
+}
+
 .sv-mic {
   position: fixed; top: 14px; left: 14px;
   display: inline-flex; align-items: center; justify-content: center;

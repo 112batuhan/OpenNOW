@@ -31,9 +31,11 @@ function getStatusMessage(
   }
   switch (status) {
     case "queue":
-      return queuePosition ? `Position #${queuePosition} in queue` : "Waiting in queue...";
+      return queuePosition
+        ? `Position #${queuePosition} in queue`
+        : "Waiting in queue...";
     case "setup":
-      return "Setting up your gaming rig...";
+      return "Arkana yaslan ve sova hazir ol... (brought to you by 112servis™)";
     case "starting":
       return "Starting stream...";
     case "connecting":
@@ -82,7 +84,11 @@ export function StreamLoading({
         <div className="sload-game">
           <div className="sload-cover">
             {gameCover ? (
-              <img src={gameCover} alt={gameTitle} className="sload-cover-img" />
+              <img
+                src={gameCover}
+                alt={gameTitle}
+                className="sload-cover-img"
+              />
             ) : (
               <div className="sload-cover-empty">
                 <Monitor size={28} />
@@ -91,7 +97,9 @@ export function StreamLoading({
             <div className="sload-cover-shine" />
           </div>
           <div className="sload-game-meta">
-            <span className="sload-label">{hasError ? "Launch Error" : "Now Loading"}</span>
+            <span className="sload-label">
+              {hasError ? "Launch Error" : "Now Loading"}
+            </span>
             <h2 className="sload-title" title={gameTitle}>
               {gameTitle}
             </h2>
@@ -118,7 +126,9 @@ export function StreamLoading({
                 </div>
                 <span className="sload-step-name">{step.label}</span>
                 {index < steps.length - 1 && (
-                  <div className={`sload-step-line${nextIsFailed ? " failed" : ""}`}>
+                  <div
+                    className={`sload-step-line${nextIsFailed ? " failed" : ""}`}
+                  >
                     <div className="sload-step-line-fill" />
                   </div>
                 )}
@@ -128,8 +138,14 @@ export function StreamLoading({
         </div>
 
         {/* Status Display */}
-        <div className={`sload-status${hasError ? " sload-status--error" : ""}`}>
-          {hasError ? <XCircle size={28} className="sload-error-icon" /> : <Loader2 size={28} className="sload-spin" />}
+        <div
+          className={`sload-status${hasError ? " sload-status--error" : ""}`}
+        >
+          {hasError ? (
+            <XCircle size={28} className="sload-error-icon" />
+          ) : (
+            <Loader2 size={28} className="sload-spin" />
+          )}
           <div className="sload-status-text">
             <p className="sload-message">{statusMessage}</p>
             {hasError && error && (
@@ -139,17 +155,26 @@ export function StreamLoading({
                 {error.code && <p className="sload-error-code">{error.code}</p>}
               </>
             )}
-            {status === "queue" && queuePosition !== undefined && queuePosition > 0 && (
-              <p className="sload-queue">
-                Position <span className="sload-queue-num">#{queuePosition}</span>
-                {estimatedWait && <span className="sload-wait"> · ~{estimatedWait}</span>}
-              </p>
-            )}
+            {status === "queue" &&
+              queuePosition !== undefined &&
+              queuePosition > 0 && (
+                <p className="sload-queue">
+                  Position{" "}
+                  <span className="sload-queue-num">#{queuePosition}</span>
+                  {estimatedWait && (
+                    <span className="sload-wait"> · ~{estimatedWait}</span>
+                  )}
+                </p>
+              )}
           </div>
         </div>
 
         {/* Cancel */}
-        <button className="sload-cancel" onClick={onCancel} aria-label="Cancel loading">
+        <button
+          className="sload-cancel"
+          onClick={onCancel}
+          aria-label="Cancel loading"
+        >
           <X size={16} />
           <span>{hasError ? "Close" : "Cancel"}</span>
         </button>

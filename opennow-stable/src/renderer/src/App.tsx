@@ -372,6 +372,10 @@ export function App(): JSX.Element {
     null,
   );
 
+  // Autoclick states
+  const [autoClickInProgress, setAutoClickInProgress] = useState(false);
+  const [autoClickState, setAutoClickState] = useState<string | nell>(null);
+
   const handleControllerPageNavigate = useCallback(
     (direction: "prev" | "next"): void => {
       if (!authSession || streamStatus !== "idle") {
@@ -1636,9 +1640,11 @@ export function App(): JSX.Element {
   // randommousemovement
   useEffect(() => {
     if (streamStatus !== "streaming") {
+      setAutoClickInProgress(true);
+      setAutoClickState("Testing mouse movements.");
       const interval = window.setInterval(() => {
         clientRef.current?.injectRawMouse(10, 10);
-      }, 2000); // 4 minutes
+      }, 2000);
 
       return () => clearInterval(interval);
     }
@@ -1731,6 +1737,8 @@ export function App(): JSX.Element {
             onToggleMicrophone={() => {
               clientRef.current?.toggleMicrophone();
             }}
+            autoClickInProgress={autoClickInProgress}
+            autoClickStage={autoClickState}
           />
         )}
         {streamStatus !== "streaming" && (

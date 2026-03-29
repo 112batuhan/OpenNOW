@@ -52,6 +52,8 @@ interface StreamViewProps {
   onCancelExit: () => void;
   onEndSession: () => void;
   onToggleMicrophone?: () => void;
+  autoClickInProgress: boolean;
+  autoClickStage: string | null;
 }
 
 function getRttColor(rttMs: number): string {
@@ -131,6 +133,8 @@ export function StreamView({
   onEndSession,
   onToggleMicrophone,
   hideStreamButtons = false,
+  autoClickInProgress,
+  autoClickStage,
 }: StreamViewProps): JSX.Element {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHints, setShowHints] = useState(true);
@@ -151,13 +155,14 @@ export function StreamView({
     return () => clearTimeout(timer);
   }, []);
 
-  // useEffect(() => {
-  //   const handleFullscreenChange = () => {
-  //     setIsFullscreen(!!document.fullscreenElement);
-  //   };
-  //   document.addEventListener("fullscreenchange", handleFullscreenChange);
-  //   return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  // }, []);
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   useEffect(() => {
     if (isConnecting) {
@@ -477,6 +482,18 @@ export function StreamView({
         >
           <span className="sv-afk-dot" />
           <span className="sv-afk-label">ANTI-AFK ON</span>
+        </div>
+      )}
+
+      {/* AutoClickInProgress */}
+      {autoClickInProgress && (
+        <div
+          className={`sv-auto-click${connectedControllers > 0 ? " sv-autoclick--stacked" : ""}`}
+          title="AutoClickInProgress"
+        >
+          <span className="sv-afk-label">
+            [ｲﾚﾚ] Otomasyon Asama: {autoClickStage}
+          </span>
         </div>
       )}
 
