@@ -35,7 +35,7 @@ function getStatusMessage(
         ? `Position #${queuePosition} in queue`
         : "Waiting in queue...";
     case "setup":
-      return "Arkana yaslan ve sova hazir ol... (brought to you by 112servis™)";
+      return "Arkana yaslan ve şova hazır ol... (brought to you by 112servis™)";
     case "starting":
       return "Starting stream...";
     case "connecting":

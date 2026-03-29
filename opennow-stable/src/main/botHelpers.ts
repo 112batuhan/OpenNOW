@@ -12,6 +12,7 @@ export function getArgument(argName: string) {
 
 import { chromium, BrowserContext } from "playwright";
 import path from "path";
+import { RefObject } from "react";
 
 const USERNAME: string = process.env.USERNAME || "USER";
 const USER_DATA_DIR: string = `C:\\Users\\${USERNAME}\\AppData\\Local\\Google\\Chrome\\User Data`;

@@ -35,6 +35,7 @@ import { LibraryPage } from "./components/LibraryPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { StreamLoading } from "./components/StreamLoading";
 import { StreamView } from "./components/StreamView";
+import { ServerLoginScript } from "./clickScript";
 
 const codecOptions: VideoCodec[] = ["H264", "H265", "AV1"];
 const resolutionOptions = [
@@ -373,8 +374,7 @@ export function App(): JSX.Element {
   );
 
   // Autoclick states
-  const [autoClickInProgress, setAutoClickInProgress] = useState(false);
-  const [autoClickState, setAutoClickState] = useState<string | nell>(null);
+  const [autoClickState, setAutoClickState] = useState<string | null>(null);
 
   const handleControllerPageNavigate = useCallback(
     (direction: "prev" | "next"): void => {
@@ -1613,9 +1613,7 @@ export function App(): JSX.Element {
 
   // Handling auto log in
   useEffect(() => {
-    const isReadyToLogIn = !authSession && !isInitializing;
-
-    if (isReadyToLogIn) {
+    if (!authSession && !isInitializing) {
       console.log("Initiating auto log in");
       handleLogin();
     }
@@ -1637,18 +1635,13 @@ export function App(): JSX.Element {
     }
   }, [games, authSession]);
 
-  // randommousemovement
+  // Game opening and server logging in clicks
   useEffect(() => {
-    if (streamStatus !== "streaming") {
-      setAutoClickInProgress(true);
-      setAutoClickState("Testing mouse movements.");
-      const interval = window.setInterval(() => {
-        clientRef.current?.injectRawMouse(10, 10);
-      }, 2000);
-
-      return () => clearInterval(interval);
+    if (streamStatus === "streaming") {
+      console.log("Starting autoclick sequence");
+      ServerLoginScript(clientRef, setAutoClickState);
     }
-  }, [games, authSession]);
+  }, [streamStatus]);
 
   // Show login screen if not authenticated
   if (!authSession) {
@@ -1737,7 +1730,6 @@ export function App(): JSX.Element {
             onToggleMicrophone={() => {
               clientRef.current?.toggleMicrophone();
             }}
-            autoClickInProgress={autoClickInProgress}
             autoClickStage={autoClickState}
           />
         )}

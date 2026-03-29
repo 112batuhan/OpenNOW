@@ -1875,12 +1875,29 @@ export class GfnWebRtcClient {
     this.sendReliable(payload);
   }
 
-  public injectRawMouse(dx: number, dy: number) {
+  public sendMouseMovement(dx: number, dy: number) {
     if (!this.inputReady) return;
 
     this.pendingMouseDx += dx;
     this.pendingMouseDy += dy;
     this.pendingMouseTimestampUs = timestampUs();
+  }
+
+  // basically just mouse button down, mouse button up
+  public sendMouseClick() {
+    const mouse_down_payload = this.inputEncoder.encodeMouseButtonDown({
+      button: 1, // GFN mouse button
+      timestampUs: timestampUs(),
+    });
+
+    this.sendReliable(mouse_down_payload);
+
+    const mouse_up_payload = this.inputEncoder.encodeMouseButtonUp({
+      button: 1, // GFN mouse button
+      timestampUs: timestampUs(),
+    });
+
+    this.sendReliable(mouse_up_payload);
   }
 
   private installInputCapture(videoElement: HTMLVideoElement): void {

@@ -52,7 +52,6 @@ interface StreamViewProps {
   onCancelExit: () => void;
   onEndSession: () => void;
   onToggleMicrophone?: () => void;
-  autoClickInProgress: boolean;
   autoClickStage: string | null;
 }
 
@@ -133,7 +132,6 @@ export function StreamView({
   onEndSession,
   onToggleMicrophone,
   hideStreamButtons = false,
-  autoClickInProgress,
   autoClickStage,
 }: StreamViewProps): JSX.Element {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -486,7 +484,7 @@ export function StreamView({
       )}
 
       {/* AutoClickInProgress */}
-      {autoClickInProgress && (
+      {autoClickStage && (
         <div
           className={`sv-auto-click${connectedControllers > 0 ? " sv-autoclick--stacked" : ""}`}
           title="AutoClickInProgress"
