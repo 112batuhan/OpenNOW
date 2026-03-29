@@ -1,7 +1,12 @@
 import { app } from "electron";
 import { join } from "node:path";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import type { VideoCodec, ColorQuality, VideoAccelerationPreference, MicrophoneMode } from "@shared/gfn";
+import type {
+  VideoCodec,
+  ColorQuality,
+  VideoAccelerationPreference,
+  MicrophoneMode,
+} from "@shared/gfn";
 
 export interface Settings {
   /** Video resolution (e.g., "1920x1080") */
@@ -54,10 +59,14 @@ const defaultStopShortcut = "Ctrl+Shift+Q";
 const defaultAntiAfkShortcut = "Ctrl+Shift+K";
 const defaultMicShortcut = "Ctrl+Shift+M";
 const LEGACY_STOP_SHORTCUTS = new Set(["META+SHIFT+Q", "CMD+SHIFT+Q"]);
-const LEGACY_ANTI_AFK_SHORTCUTS = new Set(["META+SHIFT+F10", "CMD+SHIFT+F10", "CTRL+SHIFT+F10"]);
+const LEGACY_ANTI_AFK_SHORTCUTS = new Set([
+  "META+SHIFT+F10",
+  "CMD+SHIFT+F10",
+  "CTRL+SHIFT+F10",
+]);
 
 const DEFAULT_SETTINGS: Settings = {
-  resolution: "1920x1080",
+  resolution: "1280x720",
   fps: 60,
   maxBitrateMbps: 75,
   codec: "H264",
@@ -110,7 +119,11 @@ export class SettingsManager {
 
       const migrated = this.migrateLegacyShortcutDefaults(merged);
       if (migrated) {
-        writeFileSync(this.settingsPath, JSON.stringify(merged, null, 2), "utf-8");
+        writeFileSync(
+          this.settingsPath,
+          JSON.stringify(merged, null, 2),
+          "utf-8",
+        );
       }
 
       return merged;
@@ -123,7 +136,8 @@ export class SettingsManager {
   private migrateLegacyShortcutDefaults(settings: Settings): boolean {
     let migrated = false;
 
-    const normalizeShortcut = (value: string): string => value.replace(/\s+/g, "").toUpperCase();
+    const normalizeShortcut = (value: string): string =>
+      value.replace(/\s+/g, "").toUpperCase();
     const stopShortcut = normalizeShortcut(settings.shortcutStopStream);
     const antiAfkShortcut = normalizeShortcut(settings.shortcutToggleAntiAfk);
 
@@ -150,7 +164,11 @@ export class SettingsManager {
         mkdirSync(dir, { recursive: true });
       }
 
-      writeFileSync(this.settingsPath, JSON.stringify(this.settings, null, 2), "utf-8");
+      writeFileSync(
+        this.settingsPath,
+        JSON.stringify(this.settings, null, 2),
+        "utf-8",
+      );
     } catch (error) {
       console.error("Failed to save settings:", error);
     }

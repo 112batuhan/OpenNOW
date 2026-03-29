@@ -46,8 +46,9 @@ const resolutionOptions = [
   "3440x1440",
 ];
 const fpsOptions = [30, 60, 120, 144, 240];
-const SESSION_READY_POLL_INTERVAL_MS = 2000;
-const SESSION_READY_TIMEOUT_MS = 180000;
+const SESSION_READY_POLL_INTERVAL_MS = 5000;
+/// Setting an absurdly big number to allow for queue to work
+const SESSION_READY_TIMEOUT_MS = 9999 * 1000;
 
 type GameSource = "main" | "library" | "public";
 type AppPage = "home" | "library" | "settings";
@@ -345,7 +346,7 @@ export function App(): JSX.Element {
   const [diagnostics, setDiagnostics] =
     useState<StreamDiagnostics>(defaultDiagnostics());
   const [showStatsOverlay, setShowStatsOverlay] = useState(true);
-  const [antiAfkEnabled, setAntiAfkEnabled] = useState(false);
+  const [antiAfkEnabled, setAntiAfkEnabled] = useState(true);
   const [escHoldReleaseIndicator, setEscHoldReleaseIndicator] = useState<{
     visible: boolean;
     progress: number;
@@ -1618,17 +1619,30 @@ export function App(): JSX.Element {
 
   // Handling auto game start
   useEffect(() => {
-    const targetGame = games.find(
-      (game) => game.title.toLowerCase() === "hell let loose".toLowerCase(),
-    );
+    if (games && authSession) {
+      const targetGame = games.find(
+        (game) => game.title.toLowerCase() === "hell let loose".toLowerCase(),
+      );
 
-    if (targetGame) {
-      console.log("Game found:", targetGame);
-      handlePlayGame(targetGame);
-    } else {
-      console.log("Game not found in the list.");
+      if (targetGame) {
+        console.log("Game found:", targetGame);
+        handlePlayGame(targetGame);
+      } else {
+        console.log("Game not found in the list.");
+      }
     }
-  }, [games]);
+  }, [games, authSession]);
+
+  // randommousemovement
+  useEffect(() => {
+    if (streamStatus !== "streaming") {
+      const interval = window.setInterval(() => {
+        clientRef.current?.injectRawMouse(10, 10);
+      }, 2000); // 4 minutes
+
+      return () => clearInterval(interval);
+    }
+  }, [games, authSession]);
 
   // Show login screen if not authenticated
   if (!authSession) {

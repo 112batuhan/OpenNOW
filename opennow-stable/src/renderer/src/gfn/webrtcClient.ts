@@ -30,7 +30,11 @@ import {
   rewriteH265LevelIdByProfile,
   rewriteH265TierFlag,
 } from "./sdp";
-import { MicrophoneManager, type MicState, type MicStateChange } from "./microphoneManager";
+import {
+  MicrophoneManager,
+  type MicState,
+  type MicStateChange,
+} from "./microphoneManager";
 
 interface OfferSettings {
   codec: VideoCodec;
@@ -78,20 +82,20 @@ const shiftedCharKeyMap: Record<string, KeyStrokeSpec> = {
   "!": { vk: 0x31, scancode: 0x1e, shift: true },
   "@": { vk: 0x32, scancode: 0x1f, shift: true },
   "#": { vk: 0x33, scancode: 0x20, shift: true },
-  "$": { vk: 0x34, scancode: 0x21, shift: true },
+  $: { vk: 0x34, scancode: 0x21, shift: true },
   "%": { vk: 0x35, scancode: 0x22, shift: true },
   "^": { vk: 0x36, scancode: 0x23, shift: true },
   "&": { vk: 0x37, scancode: 0x24, shift: true },
   "*": { vk: 0x38, scancode: 0x25, shift: true },
   "(": { vk: 0x39, scancode: 0x26, shift: true },
   ")": { vk: 0x30, scancode: 0x27, shift: true },
-  "_": { vk: 0xbd, scancode: 0x2d, shift: true },
+  _: { vk: 0xbd, scancode: 0x2d, shift: true },
   "+": { vk: 0xbb, scancode: 0x2e, shift: true },
   "{": { vk: 0xdb, scancode: 0x2f, shift: true },
   "}": { vk: 0xdd, scancode: 0x30, shift: true },
   "|": { vk: 0xdc, scancode: 0x31, shift: true },
   ":": { vk: 0xba, scancode: 0x33, shift: true },
-  "\"": { vk: 0xde, scancode: 0x34, shift: true },
+  '"': { vk: 0xde, scancode: 0x34, shift: true },
   "~": { vk: 0xc0, scancode: 0x35, shift: true },
   "<": { vk: 0xbc, scancode: 0x36, shift: true },
   ">": { vk: 0xbe, scancode: 0x37, shift: true },
@@ -192,7 +196,9 @@ interface ClientOptions {
 
 function timestampUs(sourceTimestampMs?: number): bigint {
   const base =
-    typeof sourceTimestampMs === "number" && Number.isFinite(sourceTimestampMs) && sourceTimestampMs >= 0
+    typeof sourceTimestampMs === "number" &&
+    Number.isFinite(sourceTimestampMs) &&
+    sourceTimestampMs >= 0
       ? sourceTimestampMs
       : performance.now();
   return BigInt(Math.floor(base * 1000));
@@ -274,7 +280,12 @@ class MouseDeltaFilter {
     let accept = true;
 
     const dtMs = tsMs - this.lastTsMs;
-    if (dtMs < 0.95 && dot < 0 && magPrev !== 0 && dot * dot > 0.81 * magIncoming * magPrev) {
+    if (
+      dtMs < 0.95 &&
+      dot < 0 &&
+      magPrev !== 0 &&
+      dot * dot > 0.81 * magIncoming * magPrev
+    ) {
       const ratio = Math.sqrt(magIncoming) / Math.sqrt(magPrev);
       let distToInt = Math.abs(ratio - Math.trunc(ratio));
       if (distToInt > 0.5) {
@@ -319,12 +330,20 @@ class MouseDeltaFilter {
   }
 }
 
-function parseResolution(resolution: string): { width: number; height: number } {
+function parseResolution(resolution: string): {
+  width: number;
+  height: number;
+} {
   const [rawWidth, rawHeight] = resolution.split("x");
   const width = Number.parseInt(rawWidth ?? "", 10);
   const height = Number.parseInt(rawHeight ?? "", 10);
 
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0
+  ) {
     return { width: 1920, height: 1080 };
   }
 
@@ -405,7 +424,11 @@ function normalizeCodecName(codecId: string): string {
   if (upper.startsWith("H264") || upper === "H264") {
     return "H264";
   }
-  if (upper.startsWith("H265") || upper === "H265" || upper.startsWith("HEVC")) {
+  if (
+    upper.startsWith("H265") ||
+    upper === "H265" ||
+    upper.startsWith("HEVC")
+  ) {
     return "H265";
   }
   if (upper.startsWith("AV1")) {
@@ -504,7 +527,8 @@ export class GfnWebRtcClient {
   private pendingMouseTimestampUs: bigint | null = null;
   private mouseDeltaFilter = new MouseDeltaFilter();
 
-  private partialReliableThresholdMs = GfnWebRtcClient.DEFAULT_PARTIAL_RELIABLE_THRESHOLD_MS;
+  private partialReliableThresholdMs =
+    GfnWebRtcClient.DEFAULT_PARTIAL_RELIABLE_THRESHOLD_MS;
   private inputQueuePeakBufferedBytesWindow = 0;
   private inputQueueMaxSchedulingDelayMsWindow = 0;
   private inputQueuePressureLoggedAtMs = 0;
@@ -618,7 +642,10 @@ export class GfnWebRtcClient {
    * ~100-200ms). As an Electron app we can be more aggressive.
    *
    */
-  private configureReceiverForLowLatency(receiver: RTCRtpReceiver, kind: string): void {
+  private configureReceiverForLowLatency(
+    receiver: RTCRtpReceiver,
+    kind: string,
+  ): void {
     try {
       const targetMs = kind === "video" ? 12 : 20;
       const rawReceiver = receiver as unknown as Record<string, unknown>;
@@ -631,14 +658,18 @@ export class GfnWebRtcClient {
       if ("playoutDelayHint" in receiver) {
         const playoutDelaySeconds = kind === "video" ? 0.012 : 0.02;
         rawReceiver.playoutDelayHint = playoutDelaySeconds;
-        this.log(`${kind} receiver: playoutDelayHint set to ${playoutDelaySeconds}s`);
+        this.log(
+          `${kind} receiver: playoutDelayHint set to ${playoutDelaySeconds}s`,
+        );
       }
 
       if (kind === "video" && "contentHint" in receiver.track) {
         receiver.track.contentHint = "motion";
       }
     } catch (error) {
-      this.log(`Warning: could not apply ${kind} low-latency receiver tuning: ${String(error)}`);
+      this.log(
+        `Warning: could not apply ${kind} low-latency receiver tuning: ${String(error)}`,
+      );
     }
   }
 
@@ -755,7 +786,9 @@ export class GfnWebRtcClient {
     // Update FPS every 500ms
     if (now - this.renderFpsCounter.lastUpdate >= 500) {
       const elapsed = (now - this.renderFpsCounter.lastUpdate) / 1000;
-      this.renderFpsCounter.fps = Math.round(this.renderFpsCounter.frames / elapsed);
+      this.renderFpsCounter.fps = Math.round(
+        this.renderFpsCounter.frames / elapsed,
+      );
       this.renderFpsCounter.frames = 0;
       this.renderFpsCounter.lastUpdate = now;
       this.diagnostics.renderFps = this.renderFpsCounter.fps;
@@ -812,13 +845,13 @@ export class GfnWebRtcClient {
         }
 
         // Calculate packet loss percentage over the interval
-        const packetsDelta = packetsReceived - this.lastStatsSample.packetsReceived;
+        const packetsDelta =
+          packetsReceived - this.lastStatsSample.packetsReceived;
         const lostDelta = packetsLost - this.lastStatsSample.packetsLost;
         if (packetsDelta > 0) {
           const totalPackets = packetsDelta + lostDelta;
-          this.diagnostics.packetLossPercent = totalPackets > 0
-            ? (lostDelta / totalPackets) * 100
-            : 0;
+          this.diagnostics.packetLossPercent =
+            totalPackets > 0 ? (lostDelta / totalPackets) * 100 : 0;
         }
       }
 
@@ -844,18 +877,23 @@ export class GfnWebRtcClient {
         framesDecoded === 0
       ) {
         this.videoDecodeStallWarningSent = true;
-        this.log("Warning: inbound video packets received but 0 frames decoded (decoder stall)");
+        this.log(
+          "Warning: inbound video packets received but 0 frames decoded (decoder stall)",
+        );
       }
 
       // Decode FPS
-      this.diagnostics.decodeFps = Math.round(Number(inboundVideo.framesPerSecond ?? 0));
+      this.diagnostics.decodeFps = Math.round(
+        Number(inboundVideo.framesPerSecond ?? 0),
+      );
 
       // Cumulative packet stats
       this.diagnostics.packetsLost = packetsLost;
       this.diagnostics.packetsReceived = packetsReceived;
 
       // Jitter (converted to milliseconds)
-      this.diagnostics.jitterMs = Math.round(Number(inboundVideo.jitter ?? 0) * 1000 * 10) / 10;
+      this.diagnostics.jitterMs =
+        Math.round(Number(inboundVideo.jitter ?? 0) * 1000 * 10) / 10;
 
       // Jitter buffer delay — the actual buffering latency added by the jitter buffer.
       // jitterBufferDelay is cumulative seconds, jitterBufferEmittedCount is cumulative frames.
@@ -863,7 +901,8 @@ export class GfnWebRtcClient {
       const jbDelay = Number(inboundVideo.jitterBufferDelay ?? 0);
       const jbEmitted = Number(inboundVideo.jitterBufferEmittedCount ?? 0);
       if (jbEmitted > 0) {
-        this.diagnostics.jitterBufferDelayMs = Math.round((jbDelay / jbEmitted) * 1000 * 10) / 10;
+        this.diagnostics.jitterBufferDelayMs =
+          Math.round((jbDelay / jbEmitted) * 1000 * 10) / 10;
       }
 
       // Get codec information
@@ -890,7 +929,8 @@ export class GfnWebRtcClient {
         }
 
         // Check for HDR in SDP fmtp line
-        this.isHdr = sdpFmtpLine.includes("transfer-characteristics=16") ||
+        this.isHdr =
+          sdpFmtpLine.includes("transfer-characteristics=16") ||
           sdpFmtpLine.includes("hdr") ||
           sdpFmtpLine.includes("HDR");
 
@@ -910,17 +950,23 @@ export class GfnWebRtcClient {
 
       // Get decode timing if available
       const totalDecodeTime = Number(inboundVideo.totalDecodeTime ?? 0);
-      const totalInterFrameDelay = Number(inboundVideo.totalInterFrameDelay ?? 0);
+      const totalInterFrameDelay = Number(
+        inboundVideo.totalInterFrameDelay ?? 0,
+      );
       const framesDecodedForTiming = Number(inboundVideo.framesDecoded ?? 1);
 
       if (framesDecodedForTiming > 0) {
-        this.diagnostics.decodeTimeMs = Math.round((totalDecodeTime / framesDecodedForTiming) * 1000 * 10) / 10;
+        this.diagnostics.decodeTimeMs =
+          Math.round((totalDecodeTime / framesDecodedForTiming) * 1000 * 10) /
+          10;
       }
 
       // Estimate render time from inter-frame delay
       if (totalInterFrameDelay > 0 && framesDecodedForTiming > 1) {
-        const avgFrameDelay = totalInterFrameDelay / (framesDecodedForTiming - 1);
-        this.diagnostics.renderTimeMs = Math.round(avgFrameDelay * 1000 * 10) / 10;
+        const avgFrameDelay =
+          totalInterFrameDelay / (framesDecodedForTiming - 1);
+        this.diagnostics.renderTimeMs =
+          Math.round(avgFrameDelay * 1000 * 10) / 10;
       }
     }
 
@@ -930,25 +976,31 @@ export class GfnWebRtcClient {
       this.diagnostics.rttMs = Math.round(rtt * 1000 * 10) / 10;
     }
 
-    const reliableBufferedAmount = this.reliableInputChannel?.bufferedAmount ?? 0;
+    const reliableBufferedAmount =
+      this.reliableInputChannel?.bufferedAmount ?? 0;
     this.inputQueuePeakBufferedBytesWindow = Math.max(
       this.inputQueuePeakBufferedBytesWindow,
       reliableBufferedAmount,
     );
     this.diagnostics.inputQueueBufferedBytes = reliableBufferedAmount;
-    this.diagnostics.inputQueuePeakBufferedBytes = this.inputQueuePeakBufferedBytesWindow;
+    this.diagnostics.inputQueuePeakBufferedBytes =
+      this.inputQueuePeakBufferedBytesWindow;
     this.diagnostics.inputQueueDropCount = this.inputQueueDropCount;
     this.diagnostics.inputQueueMaxSchedulingDelayMs =
       Math.round(this.inputQueueMaxSchedulingDelayMsWindow * 10) / 10;
 
     const shouldLogQueuePressure =
-      reliableBufferedAmount > GfnWebRtcClient.RELIABLE_MOUSE_BACKPRESSURE_BYTES / 2
-      || this.inputQueueMaxSchedulingDelayMsWindow >= 4
-      || this.inputQueueDropCount > 0;
+      reliableBufferedAmount >
+        GfnWebRtcClient.RELIABLE_MOUSE_BACKPRESSURE_BYTES / 2 ||
+      this.inputQueueMaxSchedulingDelayMsWindow >= 4 ||
+      this.inputQueueDropCount > 0;
 
     if (shouldLogQueuePressure) {
       const nowMs = performance.now();
-      if (nowMs - this.inputQueuePressureLoggedAtMs >= GfnWebRtcClient.BACKPRESSURE_LOG_INTERVAL_MS) {
+      if (
+        nowMs - this.inputQueuePressureLoggedAtMs >=
+        GfnWebRtcClient.BACKPRESSURE_LOG_INTERVAL_MS
+      ) {
         this.inputQueuePressureLoggedAtMs = nowMs;
         this.log(
           `Input queue pressure: buffered=${reliableBufferedAmount}B peak=${this.inputQueuePeakBufferedBytesWindow}B drops=${this.inputQueueDropCount} maxSchedDelay=${this.diagnostics.inputQueueMaxSchedulingDelayMs.toFixed(1)}ms`,
@@ -968,10 +1020,14 @@ export class GfnWebRtcClient {
     }
   }
 
-  private replaceTrackInStream(stream: MediaStream, track: MediaStreamTrack): void {
-    const existingTracks = track.kind === "video"
-      ? stream.getVideoTracks()
-      : stream.getAudioTracks();
+  private replaceTrackInStream(
+    stream: MediaStream,
+    track: MediaStreamTrack,
+  ): void {
+    const existingTracks =
+      track.kind === "video"
+        ? stream.getVideoTracks()
+        : stream.getAudioTracks();
 
     for (const existingTrack of existingTracks) {
       stream.removeTrack(existingTrack);
@@ -1106,10 +1162,14 @@ export class GfnWebRtcClient {
           void ctx.resume();
         }
 
-        this.log(`Audio routed through AudioContext (latency: ${(ctx.baseLatency * 1000).toFixed(1)}ms, sampleRate: ${ctx.sampleRate}Hz)`);
+        this.log(
+          `Audio routed through AudioContext (latency: ${(ctx.baseLatency * 1000).toFixed(1)}ms, sampleRate: ${ctx.sampleRate}Hz)`,
+        );
       } catch (error) {
         // Fallback: play directly through the audio element
-        this.log(`AudioContext creation failed, falling back to audio element: ${String(error)}`);
+        this.log(
+          `AudioContext creation failed, falling back to audio element: ${String(error)}`,
+        );
         this.options.audioElement.muted = false;
         this.options.audioElement
           .play()
@@ -1123,7 +1183,10 @@ export class GfnWebRtcClient {
     }
   }
 
-  private async waitForIceGathering(pc: RTCPeerConnection, timeoutMs: number): Promise<string> {
+  private async waitForIceGathering(
+    pc: RTCPeerConnection,
+    timeoutMs: number,
+  ): Promise<string> {
     if (pc.iceGatheringState === "complete" && pc.localDescription?.sdp) {
       return pc.localDescription.sdp;
     }
@@ -1198,7 +1261,11 @@ export class GfnWebRtcClient {
     let connectedCount = 0;
     const nowMs = performance.now();
 
-    for (let i = 0; i < Math.min(gamepads.length, GAMEPAD_MAX_CONTROLLERS); i++) {
+    for (
+      let i = 0;
+      i < Math.min(gamepads.length, GAMEPAD_MAX_CONTROLLERS);
+      i++
+    ) {
       const gamepad = gamepads[i];
 
       if (gamepad && gamepad.connected) {
@@ -1208,9 +1275,11 @@ export class GfnWebRtcClient {
         if (!this.connectedGamepads.has(i)) {
           this.connectedGamepads.add(i);
           // Set bit i in bitmap (matching official client's AA(i) = 1 << i)
-          this.gamepadBitmap |= (1 << i);
+          this.gamepadBitmap |= 1 << i;
           this.log(`Gamepad ${i} connected: ${gamepad.id}`);
-          this.log(`  Buttons: ${gamepad.buttons.length}, Axes: ${gamepad.axes.length}, Mapping: ${gamepad.mapping}`);
+          this.log(
+            `  Buttons: ${gamepad.buttons.length}, Axes: ${gamepad.axes.length}, Mapping: ${gamepad.mapping}`,
+          );
           this.log(`  Bitmap now: 0x${this.gamepadBitmap.toString(16)}`);
           this.diagnostics.connectedGamepads = this.connectedGamepads.size;
           this.emitStats();
@@ -1223,14 +1292,20 @@ export class GfnWebRtcClient {
         // Send if state changed OR as a keepalive to maintain server controller presence
         // Games detect active input device by receiving packets; if we stop sending,
         // the game falls back to showing keyboard/mouse prompts.
-        const needsKeepalive = this.activeInputMode === "gamepad"
-          && !stateChanged
-          && (nowMs - this.lastGamepadSendMs) >= GfnWebRtcClient.GAMEPAD_KEEPALIVE_MS;
+        const needsKeepalive =
+          this.activeInputMode === "gamepad" &&
+          !stateChanged &&
+          nowMs - this.lastGamepadSendMs >=
+            GfnWebRtcClient.GAMEPAD_KEEPALIVE_MS;
 
         if (stateChanged || needsKeepalive) {
           // Determine if we should use the partially reliable channel
           const usePR = this.mouseInputChannel?.readyState === "open";
-          const bytes = this.inputEncoder.encodeGamepadState(gamepadInput, this.gamepadBitmap, usePR);
+          const bytes = this.inputEncoder.encodeGamepadState(
+            gamepadInput,
+            this.gamepadBitmap,
+            usePR,
+          );
           this.sendGamepad(bytes);
           this.lastGamepadSendMs = nowMs;
 
@@ -1252,7 +1327,9 @@ export class GfnWebRtcClient {
           if (stateChanged) {
             this.gamepadSendCount++;
             if (this.gamepadSendCount <= 20) {
-              this.log(`Gamepad send #${this.gamepadSendCount}: pad=${i} btns=0x${gamepadInput.buttons.toString(16)} lt=${gamepadInput.leftTrigger} rt=${gamepadInput.rightTrigger} lx=${gamepadInput.leftStickX} ly=${gamepadInput.leftStickY} rx=${gamepadInput.rightStickX} ry=${gamepadInput.rightStickY} bytes=${bytes.length}`);
+              this.log(
+                `Gamepad send #${this.gamepadSendCount}: pad=${i} btns=0x${gamepadInput.buttons.toString(16)} lt=${gamepadInput.leftTrigger} rt=${gamepadInput.rightTrigger} lx=${gamepadInput.leftStickX} ly=${gamepadInput.leftStickY} rx=${gamepadInput.rightStickX} ry=${gamepadInput.rightStickY} bytes=${bytes.length}`,
+              );
             }
           }
         }
@@ -1261,7 +1338,9 @@ export class GfnWebRtcClient {
         this.connectedGamepads.delete(i);
         this.previousGamepadStates.delete(i);
         this.gamepadBitmap &= ~(1 << i);
-        this.log(`Gamepad ${i} disconnected, bitmap now: 0x${this.gamepadBitmap.toString(16)}`);
+        this.log(
+          `Gamepad ${i} disconnected, bitmap now: 0x${this.gamepadBitmap.toString(16)}`,
+        );
         this.diagnostics.connectedGamepads = this.connectedGamepads.size;
         this.emitStats();
 
@@ -1279,7 +1358,11 @@ export class GfnWebRtcClient {
           timestampUs: timestampUs(),
         };
         const usePR = this.mouseInputChannel?.readyState === "open";
-        const bytes = this.inputEncoder.encodeGamepadState(disconnectState, this.gamepadBitmap, usePR);
+        const bytes = this.inputEncoder.encodeGamepadState(
+          disconnectState,
+          this.gamepadBitmap,
+          usePR,
+        );
         this.sendGamepad(bytes);
       }
     }
@@ -1287,7 +1370,10 @@ export class GfnWebRtcClient {
     this.diagnostics.connectedGamepads = connectedCount;
   }
 
-  private readGamepadState(gamepad: Gamepad, controllerId: number): GamepadInput {
+  private readGamepadState(
+    gamepad: Gamepad,
+    controllerId: number,
+  ): GamepadInput {
     const buttons = mapGamepadButtons(gamepad);
     const axes = readGamepadAxes(gamepad);
 
@@ -1305,7 +1391,10 @@ export class GfnWebRtcClient {
     };
   }
 
-  private hasGamepadStateChanged(controllerId: number, newState: GamepadInput): boolean {
+  private hasGamepadStateChanged(
+    controllerId: number,
+    newState: GamepadInput,
+  ): boolean {
     const prevState = this.previousGamepadStates.get(controllerId);
     if (!prevState) {
       return true;
@@ -1334,7 +1423,9 @@ export class GfnWebRtcClient {
 
   private onInputHandshakeMessage(bytes: Uint8Array): void {
     if (bytes.length < 2) {
-      this.log(`Input handshake: ignoring short message (${bytes.length} bytes)`);
+      this.log(
+        `Input handshake: ignoring short message (${bytes.length} bytes)`,
+      );
       return;
     }
 
@@ -1349,12 +1440,16 @@ export class GfnWebRtcClient {
 
     if (firstWord === 526) {
       version = bytes.length >= 4 ? view.getUint16(2, true) : 2;
-      this.log(`Handshake detected: firstWord=526 (0x020e), version=${version}`);
+      this.log(
+        `Handshake detected: firstWord=526 (0x020e), version=${version}`,
+      );
     } else if (bytes[0] === 0x0e) {
       version = firstWord;
       this.log(`Handshake detected: byte[0]=0x0e, version=${version}`);
     } else {
-      this.log(`Input channel message not a handshake: firstWord=${firstWord} (0x${firstWord.toString(16)})`);
+      this.log(
+        `Input channel message not a handshake: firstWord=${firstWord} (0x${firstWord.toString(16)})`,
+      );
       return;
     }
 
@@ -1367,7 +1462,9 @@ export class GfnWebRtcClient {
       this.inputEncoder.setProtocolVersion(version);
       this.diagnostics.inputReady = true;
       this.emitStats();
-      this.log(`Input handshake complete (protocol v${version}) — starting heartbeat + gamepad polling`);
+      this.log(
+        `Input handshake complete (protocol v${version}) — starting heartbeat + gamepad polling`,
+      );
       this.setupInputHeartbeat();
       this.setupGamepadPolling();
     }
@@ -1387,17 +1484,24 @@ export class GfnWebRtcClient {
       this.onInputHandshakeMessage(bytes);
     };
 
-    this.mouseInputChannel = pc.createDataChannel("input_channel_partially_reliable", {
-      ordered: false,
-      maxPacketLifeTime: this.partialReliableThresholdMs,
-    });
+    this.mouseInputChannel = pc.createDataChannel(
+      "input_channel_partially_reliable",
+      {
+        ordered: false,
+        maxPacketLifeTime: this.partialReliableThresholdMs,
+      },
+    );
 
     this.mouseInputChannel.onopen = () => {
-      this.log(`Mouse channel open (partially reliable, maxPacketLifeTime=${this.partialReliableThresholdMs}ms)`);
+      this.log(
+        `Mouse channel open (partially reliable, maxPacketLifeTime=${this.partialReliableThresholdMs}ms)`,
+      );
     };
   }
 
-  private mapTimerNotificationCode(rawCode: number): StreamTimeWarning["code"] | null {
+  private mapTimerNotificationCode(
+    rawCode: number,
+  ): StreamTimeWarning["code"] | null {
     // Mirrors official client behavior from timerNotification -> StreamWarningType.
     if (rawCode === 1 || rawCode === 2) {
       return 1;
@@ -1411,7 +1515,9 @@ export class GfnWebRtcClient {
     return null;
   }
 
-  private async onControlChannelMessage(data: string | Blob | ArrayBuffer): Promise<void> {
+  private async onControlChannelMessage(
+    data: string | Blob | ArrayBuffer,
+  ): Promise<void> {
     let payloadText: string;
     if (typeof data === "string") {
       payloadText = data;
@@ -1430,11 +1536,16 @@ export class GfnWebRtcClient {
       return;
     }
 
-    if (!parsed || typeof parsed !== "object" || !("timerNotification" in parsed)) {
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("timerNotification" in parsed)
+    ) {
       return;
     }
 
-    const timerNotification = (parsed as { timerNotification?: unknown }).timerNotification;
+    const timerNotification = (parsed as { timerNotification?: unknown })
+      .timerNotification;
     if (!timerNotification || typeof timerNotification !== "object") {
       return;
     }
@@ -1446,7 +1557,9 @@ export class GfnWebRtcClient {
       return;
     }
 
-    const rawSecondsLeft = Number((timerNotification as { secondsLeft?: unknown }).secondsLeft);
+    const rawSecondsLeft = Number(
+      (timerNotification as { secondsLeft?: unknown }).secondsLeft,
+    );
     const secondsLeft =
       Number.isFinite(rawSecondsLeft) && rawSecondsLeft >= 0
         ? Math.floor(rawSecondsLeft)
@@ -1479,7 +1592,9 @@ export class GfnWebRtcClient {
       this.reliableInputChannel.send(safePayload.buffer);
     } else if (!this.reliableDropLogged) {
       this.reliableDropLogged = true;
-      this.log(`Reliable channel not open (state=${this.reliableInputChannel?.readyState ?? "null"}), dropping event (${payload.length} bytes)`);
+      this.log(
+        `Reliable channel not open (state=${this.reliableInputChannel?.readyState ?? "null"}), dropping event (${payload.length} bytes)`,
+      );
     }
   }
 
@@ -1494,7 +1609,11 @@ export class GfnWebRtcClient {
 
     try {
       await nav.keyboard.lock([
-        "Escape", "F11", "BrowserBack", "BrowserForward", "BrowserRefresh",
+        "Escape",
+        "F11",
+        "BrowserBack",
+        "BrowserForward",
+        "BrowserRefresh",
       ]);
       this.log("Keyboard lock acquired (Escape captured in fullscreen)");
     } catch (error) {
@@ -1517,12 +1636,18 @@ export class GfnWebRtcClient {
     await this.lockEscapeInFullscreen();
 
     try {
-      await (videoElement.requestPointerLock({ unadjustedMovement: true } as any) as unknown as Promise<void>);
-      this.log("Pointer lock acquired with unadjustedMovement=true (raw/unaccelerated)");
+      await (videoElement.requestPointerLock({
+        unadjustedMovement: true,
+      } as any) as unknown as Promise<void>);
+      this.log(
+        "Pointer lock acquired with unadjustedMovement=true (raw/unaccelerated)",
+      );
     } catch (err) {
       const domErr = err as DOMException;
       if (domErr?.name === "NotSupportedError") {
-        this.log("unadjustedMovement not supported, falling back to standard pointer lock (accelerated)");
+        this.log(
+          "unadjustedMovement not supported, falling back to standard pointer lock (accelerated)",
+        );
         await videoElement.requestPointerLock();
       } else {
         throw err;
@@ -1561,13 +1686,13 @@ export class GfnWebRtcClient {
       if (!this.inputReady) {
         return;
       }
-      if (!this.pressedKeys.has(0x1B)) {
+      if (!this.pressedKeys.has(0x1b)) {
         return;
       }
 
-      this.pressedKeys.delete(0x1B);
+      this.pressedKeys.delete(0x1b);
       const payload = this.inputEncoder.encodeKeyUp({
-        keycode: 0x1B,
+        keycode: 0x1b,
         scancode,
         modifiers: 0,
         timestampUs: timestampUs(),
@@ -1609,7 +1734,7 @@ export class GfnWebRtcClient {
         this.log("Escape held for 5s, releasing pointer lock");
         this.suppressNextSyntheticEscape = true;
         // Remove Escape from pressedKeys so keyup doesn't send it to stream
-        this.pressedKeys.delete(0x1B);
+        this.pressedKeys.delete(0x1b);
         document.exitPointerLock();
       }
     }, 5000);
@@ -1645,20 +1770,25 @@ export class GfnWebRtcClient {
     this.pressedKeys.clear();
   }
 
-  private sendKeyPacket(vk: number, scancode: number, modifiers: number, isDown: boolean): void {
+  private sendKeyPacket(
+    vk: number,
+    scancode: number,
+    modifiers: number,
+    isDown: boolean,
+  ): void {
     const payload = isDown
       ? this.inputEncoder.encodeKeyDown({
-        keycode: vk,
-        scancode,
-        modifiers,
-        timestampUs: timestampUs(),
-      })
+          keycode: vk,
+          scancode,
+          modifiers,
+          timestampUs: timestampUs(),
+        })
       : this.inputEncoder.encodeKeyUp({
-        keycode: vk,
-        scancode,
-        modifiers,
-        timestampUs: timestampUs(),
-      });
+          keycode: vk,
+          scancode,
+          modifiers,
+          timestampUs: timestampUs(),
+        });
     this.sendReliable(payload);
   }
 
@@ -1745,15 +1875,27 @@ export class GfnWebRtcClient {
     this.sendReliable(payload);
   }
 
+  public injectRawMouse(dx: number, dy: number) {
+    if (!this.inputReady) return;
+
+    this.pendingMouseDx += dx;
+    this.pendingMouseDy += dy;
+    this.pendingMouseTimestampUs = timestampUs();
+  }
+
   private installInputCapture(videoElement: HTMLVideoElement): void {
     this.detachInputCapture();
 
     const hasPointerRawUpdate = "onpointerrawupdate" in videoElement;
     const hasCoalescedEvents =
-      typeof PointerEvent !== "undefined" && "getCoalescedEvents" in PointerEvent.prototype;
-    const pointerMoveEventName: "pointerrawupdate" | "pointermove" | null = hasPointerRawUpdate
-      ? "pointerrawupdate"
-      : (typeof PointerEvent !== "undefined" ? "pointermove" : null);
+      typeof PointerEvent !== "undefined" &&
+      "getCoalescedEvents" in PointerEvent.prototype;
+    const pointerMoveEventName: "pointerrawupdate" | "pointermove" | null =
+      hasPointerRawUpdate
+        ? "pointerrawupdate"
+        : typeof PointerEvent !== "undefined"
+          ? "pointermove"
+          : null;
 
     this.mouseFlushIntervalMs = hasPointerRawUpdate
       ? GfnWebRtcClient.MOUSE_FLUSH_FAST_MS
@@ -1798,14 +1940,20 @@ export class GfnWebRtcClient {
 
       const reliable = this.reliableInputChannel;
       if (
-        reliable?.readyState === "open"
-        && reliable.bufferedAmount > GfnWebRtcClient.RELIABLE_MOUSE_BACKPRESSURE_BYTES
+        reliable?.readyState === "open" &&
+        reliable.bufferedAmount >
+          GfnWebRtcClient.RELIABLE_MOUSE_BACKPRESSURE_BYTES
       ) {
         const now = performance.now();
         this.inputQueueDropCount++;
-        if (now - this.mouseBackpressureLoggedAtMs >= GfnWebRtcClient.BACKPRESSURE_LOG_INTERVAL_MS) {
+        if (
+          now - this.mouseBackpressureLoggedAtMs >=
+          GfnWebRtcClient.BACKPRESSURE_LOG_INTERVAL_MS
+        ) {
           this.mouseBackpressureLoggedAtMs = now;
-          this.log(`Dropping stale mouse movement (reliable bufferedAmount=${reliable.bufferedAmount})`);
+          this.log(
+            `Dropping stale mouse movement (reliable bufferedAmount=${reliable.bufferedAmount})`,
+          );
         }
         this.pendingMouseDx = 0;
         this.pendingMouseDy = 0;
@@ -1825,9 +1973,16 @@ export class GfnWebRtcClient {
       this.sendReliable(payload);
     };
 
-    this.mouseFlushTimer = window.setInterval(flushMouse, this.mouseFlushIntervalMs);
+    this.mouseFlushTimer = window.setInterval(
+      flushMouse,
+      this.mouseFlushIntervalMs,
+    );
 
-    const queueMouseMovement = (dx: number, dy: number, eventTimestampMs: number): void => {
+    const queueMouseMovement = (
+      dx: number,
+      dy: number,
+      eventTimestampMs: number,
+    ): void => {
       if (!this.inputReady || document.pointerLockElement !== videoElement) {
         return;
       }
@@ -1853,7 +2008,11 @@ export class GfnWebRtcClient {
       const samples = hasCoalescedEvents ? event.getCoalescedEvents() : [];
       if (samples.length > 0) {
         for (const sample of samples) {
-          queueMouseMovement(sample.movementX, sample.movementY, sample.timeStamp);
+          queueMouseMovement(
+            sample.movementX,
+            sample.movementY,
+            sample.timeStamp,
+          );
         }
         return;
       }
@@ -1871,11 +2030,13 @@ export class GfnWebRtcClient {
       }
 
       const isEscapeEvent =
-        event.key === "Escape"
-        || event.key === "Esc"
-        || event.code === "Escape"
-        || event.keyCode === 27;
-      const mapped = mapKeyboardEvent(event) ?? (isEscapeEvent ? { vk: 0x1B, scancode: 0x29 } : null);
+        event.key === "Escape" ||
+        event.key === "Esc" ||
+        event.code === "Escape" ||
+        event.keyCode === 27;
+      const mapped =
+        mapKeyboardEvent(event) ??
+        (isEscapeEvent ? { vk: 0x1b, scancode: 0x29 } : null);
 
       // Keep browser from handling held keys (for example Tab focus traversal)
       // while streaming input is active.
@@ -1911,7 +2072,7 @@ export class GfnWebRtcClient {
       event.preventDefault();
       this.pressedKeys.add(mapped.vk);
 
-      if (mapped.vk === 0x1B && document.pointerLockElement === videoElement) {
+      if (mapped.vk === 0x1b && document.pointerLockElement === videoElement) {
         // Escape with pointer lock active: we start the hold timer for hold-to-exit.
         // For a quick tap (< 5s), we send Escape on keyup (not here) so we can distinguish tap vs hold.
         // For a hold (>= 5s), pointer lock is released and we suppress sending Escape to stream.
@@ -1940,27 +2101,29 @@ export class GfnWebRtcClient {
       }
 
       const isEscapeEvent =
-        event.key === "Escape"
-        || event.key === "Esc"
-        || event.code === "Escape"
-        || event.keyCode === 27;
-      const mapped = mapKeyboardEvent(event) ?? (isEscapeEvent ? { vk: 0x1B, scancode: 0x29 } : null);
+        event.key === "Escape" ||
+        event.key === "Esc" ||
+        event.code === "Escape" ||
+        event.keyCode === 27;
+      const mapped =
+        mapKeyboardEvent(event) ??
+        (isEscapeEvent ? { vk: 0x1b, scancode: 0x29 } : null);
       if (!mapped) {
         return;
       }
 
       event.preventDefault();
-      if (mapped.vk === 0x1B) {
+      if (mapped.vk === 0x1b) {
         this.clearEscapeAutoKeyUpTimer();
         // Check if the hold timer still exists - if so, this was a tap (not a hold)
         const wasTap = this.escapeHoldReleaseTimer !== null;
         this.clearEscapeHoldTimer();
 
-        if (wasTap && this.pressedKeys.has(0x1B)) {
+        if (wasTap && this.pressedKeys.has(0x1b)) {
           // This was a quick tap - send Escape to the stream now
           this.log("Escape tap detected - sending to stream");
-          this.sendKeyPacket(0x1B, mapped.scancode || 0x29, 0, true);
-          this.sendKeyPacket(0x1B, mapped.scancode || 0x29, 0, false);
+          this.sendKeyPacket(0x1b, mapped.scancode || 0x29, 0, true);
+          this.sendKeyPacket(0x1b, mapped.scancode || 0x29, 0, false);
         }
         // If hold timer was already cleared, hold completed and pointer lock was released.
         // In that case we don't send Escape to stream.
@@ -2022,7 +2185,10 @@ export class GfnWebRtcClient {
       event.preventDefault();
       // Official GFN client sends negated raw deltaY as int16 (no quantization to ±120).
       // Clamp to int16 range since browser deltaY can exceed it with fast scrolling.
-      const delta = Math.max(-32768, Math.min(32767, Math.round(-event.deltaY)));
+      const delta = Math.max(
+        -32768,
+        Math.min(32767, Math.round(-event.deltaY)),
+      );
       const payload = this.inputEncoder.encodeMouseWheel({
         delta,
         timestampUs: timestampUs(event.timeStamp),
@@ -2032,9 +2198,11 @@ export class GfnWebRtcClient {
 
     const onClick = () => {
       // GFN-style sequence: fullscreen -> keyboard lock (Escape) -> pointer lock.
-      void this.requestPointerLockWithEscGuard(videoElement, true).catch((err: DOMException) => {
-        this.log(`Pointer lock request failed: ${err.name}: ${err.message}`);
-      });
+      void this.requestPointerLockWithEscGuard(videoElement, true).catch(
+        (err: DOMException) => {
+          this.log(`Pointer lock request failed: ${err.name}: ${err.message}`);
+        },
+      );
       videoElement.focus();
     };
 
@@ -2073,7 +2241,7 @@ export class GfnWebRtcClient {
       }
 
       // VK 0x1B = 27 = Escape
-      const escapeWasPressed = this.pressedKeys.has(0x1B);
+      const escapeWasPressed = this.pressedKeys.has(0x1b);
 
       if (escapeWasPressed) {
         // Escape was already tracked as pressed — the normal keyup handler will fire
@@ -2100,7 +2268,7 @@ export class GfnWebRtcClient {
         // Send synthetic Escape keydown + keyup
         this.log("Sending synthetic Escape (pointer lock lost by browser)");
         const escDown = this.inputEncoder.encodeKeyDown({
-          keycode: 0x1B,
+          keycode: 0x1b,
           scancode: 0x29, // Escape scancode
           modifiers: 0,
           timestampUs: timestampUs(),
@@ -2108,7 +2276,7 @@ export class GfnWebRtcClient {
         this.sendReliable(escDown);
 
         const escUp = this.inputEncoder.encodeKeyUp({
-          keycode: 0x1B,
+          keycode: 0x1b,
           scancode: 0x29,
           modifiers: 0,
           timestampUs: timestampUs(),
@@ -2117,8 +2285,10 @@ export class GfnWebRtcClient {
 
         // Re-acquire pointer lock so the user stays in the game
         if (this.videoElement && this.activeInputMode !== "gamepad") {
-          void this.requestPointerLockWithEscGuard(this.videoElement, false)
-            .catch(() => {});
+          void this.requestPointerLockWithEscGuard(
+            this.videoElement,
+            false,
+          ).catch(() => {});
         }
       }, 50);
     };
@@ -2164,7 +2334,10 @@ export class GfnWebRtcClient {
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("keyup", onKeyUp, true);
     if (pointerMoveEventName) {
-      document.addEventListener(pointerMoveEventName, onPointerMove as EventListener);
+      document.addEventListener(
+        pointerMoveEventName,
+        onPointerMove as EventListener,
+      );
     } else {
       window.addEventListener("mousemove", onMouseMove);
     }
@@ -2182,28 +2355,62 @@ export class GfnWebRtcClient {
       onFullscreenChange();
     }
 
-    this.inputCleanup.push(() => window.removeEventListener("gamepadconnected", this.onGamepadConnected));
-    this.inputCleanup.push(() => window.removeEventListener("gamepaddisconnected", this.onGamepadDisconnected));
-    this.inputCleanup.push(() => document.removeEventListener("keydown", onKeyDown, true));
-    this.inputCleanup.push(() => document.removeEventListener("keyup", onKeyUp, true));
+    this.inputCleanup.push(() =>
+      window.removeEventListener("gamepadconnected", this.onGamepadConnected),
+    );
+    this.inputCleanup.push(() =>
+      window.removeEventListener(
+        "gamepaddisconnected",
+        this.onGamepadDisconnected,
+      ),
+    );
+    this.inputCleanup.push(() =>
+      document.removeEventListener("keydown", onKeyDown, true),
+    );
+    this.inputCleanup.push(() =>
+      document.removeEventListener("keyup", onKeyUp, true),
+    );
     if (pointerMoveEventName) {
-      this.inputCleanup.push(() => document.removeEventListener(pointerMoveEventName, onPointerMove as EventListener));
+      this.inputCleanup.push(() =>
+        document.removeEventListener(
+          pointerMoveEventName,
+          onPointerMove as EventListener,
+        ),
+      );
     } else {
-      this.inputCleanup.push(() => window.removeEventListener("mousemove", onMouseMove));
+      this.inputCleanup.push(() =>
+        window.removeEventListener("mousemove", onMouseMove),
+      );
     }
-    this.inputCleanup.push(() => videoElement.removeEventListener("mousedown", onMouseDown));
-    this.inputCleanup.push(() => videoElement.removeEventListener("mouseup", onMouseUp));
-    this.inputCleanup.push(() => videoElement.removeEventListener("wheel", onWheel));
-    this.inputCleanup.push(() => videoElement.removeEventListener("click", onClick));
-    this.inputCleanup.push(() => document.removeEventListener("pointerlockchange", onPointerLockChange));
-    this.inputCleanup.push(() => document.removeEventListener("fullscreenchange", onFullscreenChange));
-    this.inputCleanup.push(() => window.removeEventListener("blur", onWindowBlur));
-    this.inputCleanup.push(() => document.removeEventListener("visibilitychange", onVisibilityChange));
-      this.inputCleanup.push(() => {
-        if (this.pointerLockEscapeTimer !== null) {
-          window.clearTimeout(this.pointerLockEscapeTimer);
-          this.pointerLockEscapeTimer = null;
-        }
+    this.inputCleanup.push(() =>
+      videoElement.removeEventListener("mousedown", onMouseDown),
+    );
+    this.inputCleanup.push(() =>
+      videoElement.removeEventListener("mouseup", onMouseUp),
+    );
+    this.inputCleanup.push(() =>
+      videoElement.removeEventListener("wheel", onWheel),
+    );
+    this.inputCleanup.push(() =>
+      videoElement.removeEventListener("click", onClick),
+    );
+    this.inputCleanup.push(() =>
+      document.removeEventListener("pointerlockchange", onPointerLockChange),
+    );
+    this.inputCleanup.push(() =>
+      document.removeEventListener("fullscreenchange", onFullscreenChange),
+    );
+    this.inputCleanup.push(() =>
+      window.removeEventListener("blur", onWindowBlur),
+    );
+    this.inputCleanup.push(() =>
+      document.removeEventListener("visibilitychange", onVisibilityChange),
+    );
+    this.inputCleanup.push(() => {
+      if (this.pointerLockEscapeTimer !== null) {
+        window.clearTimeout(this.pointerLockEscapeTimer);
+        this.pointerLockEscapeTimer = null;
+      }
       this.escapeTapDispatchedForCurrentHold = false;
       this.clearEscapeAutoKeyUpTimer();
       this.clearEscapeHoldTimer();
@@ -2233,7 +2440,8 @@ export class GfnWebRtcClient {
       for (const codec of capabilities.codecs) {
         const mime = codec.mimeType.toUpperCase();
         if (mime.includes("H264")) codecs.add("H264");
-        else if (mime.includes("H265") || mime.includes("HEVC")) codecs.add("H265");
+        else if (mime.includes("H265") || mime.includes("HEVC"))
+          codecs.add("H265");
         else if (mime.includes("AV1")) codecs.add("AV1");
         else if (mime.includes("VP9")) codecs.add("VP9");
         else if (mime.includes("VP8")) codecs.add("VP8");
@@ -2342,7 +2550,9 @@ export class GfnWebRtcClient {
 
       const receiverCaps = RTCRtpReceiver.getCapabilities("video")?.codecs;
       if (!receiverCaps) {
-        this.log("setCodecPreferences: RTCRtpReceiver.getCapabilities returned null, skipping");
+        this.log(
+          "setCodecPreferences: RTCRtpReceiver.getCapabilities returned null, skipping",
+        );
         return;
       }
 
@@ -2372,7 +2582,9 @@ export class GfnWebRtcClient {
       });
 
       if (preferred.length === 0) {
-        this.log(`setCodecPreferences: ${codec} (${preferredMime}) not in receiver capabilities, skipping`);
+        this.log(
+          `setCodecPreferences: ${codec} (${preferredMime}) not in receiver capabilities, skipping`,
+        );
         return;
       }
 
@@ -2400,7 +2612,9 @@ export class GfnWebRtcClient {
           `setCodecPreferences: set ${codec} (${preferred.length} preferred + ${auxiliary.length} auxiliary receiver codecs)`,
         );
       } catch (e) {
-        this.log(`setCodecPreferences: receiver-only failed (${String(e)}), retrying with sender capabilities`);
+        this.log(
+          `setCodecPreferences: receiver-only failed (${String(e)}), retrying with sender capabilities`,
+        );
         try {
           codecList = codecList.concat(senderCaps);
           videoTransceiver.setCodecPreferences(codecList);
@@ -2408,25 +2622,41 @@ export class GfnWebRtcClient {
             `setCodecPreferences: retry succeeded with sender capabilities (+${senderCaps.length})`,
           );
         } catch (retryErr) {
-          this.log(`setCodecPreferences: retry failed (${String(retryErr)}), falling back to SDP-only approach`);
+          this.log(
+            `setCodecPreferences: retry failed (${String(retryErr)}), falling back to SDP-only approach`,
+          );
         }
       }
     } catch (e) {
-      this.log(`setCodecPreferences: failed (${String(e)}), falling back to SDP-only approach`);
+      this.log(
+        `setCodecPreferences: failed (${String(e)}), falling back to SDP-only approach`,
+      );
     }
   }
 
-  async handleOffer(offerSdp: string, session: SessionInfo, settings: OfferSettings): Promise<void> {
+  async handleOffer(
+    offerSdp: string,
+    session: SessionInfo,
+    settings: OfferSettings,
+  ): Promise<void> {
     this.cleanupPeerConnection();
 
     this.log("=== handleOffer START ===");
-    this.log(`Session: id=${session.sessionId}, status=${session.status}, serverIp=${session.serverIp}`);
-    this.log(`Signaling: server=${session.signalingServer}, url=${session.signalingUrl}`);
-    this.log(`MediaConnectionInfo: ${session.mediaConnectionInfo ? `ip=${session.mediaConnectionInfo.ip}, port=${session.mediaConnectionInfo.port}` : "NONE"}`);
+    this.log(
+      `Session: id=${session.sessionId}, status=${session.status}, serverIp=${session.serverIp}`,
+    );
+    this.log(
+      `Signaling: server=${session.signalingServer}, url=${session.signalingUrl}`,
+    );
+    this.log(
+      `MediaConnectionInfo: ${session.mediaConnectionInfo ? `ip=${session.mediaConnectionInfo.ip}, port=${session.mediaConnectionInfo.port}` : "NONE"}`,
+    );
     this.log(
       `Settings: codec=${settings.codec}, colorQuality=${settings.colorQuality}, resolution=${settings.resolution}, fps=${settings.fps}, maxBitrate=${settings.maxBitrateKbps}kbps`,
     );
-    this.log(`ICE servers: ${session.iceServers.length} (${session.iceServers.map(s => s.urls.join(",")).join(" | ")})`);
+    this.log(
+      `ICE servers: ${session.iceServers.length} (${session.iceServers.map((s) => s.urls.join(",")).join(" | ")})`,
+    );
     this.log(`Offer SDP length: ${offerSdp.length} chars`);
     // Log full offer SDP for ICE debugging
     this.log(`=== FULL OFFER SDP START ===`);
@@ -2436,13 +2666,16 @@ export class GfnWebRtcClient {
     this.log(`=== FULL OFFER SDP END ===`);
 
     const negotiatedPartialReliable = parsePartialReliableThresholdMs(offerSdp);
-    this.partialReliableThresholdMs = negotiatedPartialReliable ?? GfnWebRtcClient.DEFAULT_PARTIAL_RELIABLE_THRESHOLD_MS;
+    this.partialReliableThresholdMs =
+      negotiatedPartialReliable ??
+      GfnWebRtcClient.DEFAULT_PARTIAL_RELIABLE_THRESHOLD_MS;
     this.log(
       `Input channel policy: partial reliable threshold=${this.partialReliableThresholdMs}ms${negotiatedPartialReliable === null ? " (fallback)" : ""}`,
     );
 
     // Extract server region from session
-    this.serverRegion = session.signalingServer || session.streamingBaseUrl || "";
+    this.serverRegion =
+      session.signalingServer || session.streamingBaseUrl || "";
     // Clean up the region string (extract hostname or region name)
     if (this.serverRegion) {
       try {
@@ -2501,7 +2734,9 @@ export class GfnWebRtcClient {
 
     pc.ondatachannel = (event) => {
       const channel = event.channel;
-      this.log(`Remote data channel received: label=${channel.label}, ordered=${channel.ordered}`);
+      this.log(
+        `Remote data channel received: label=${channel.label}, ordered=${channel.ordered}`,
+      );
       if (channel.label !== "control_channel") {
         return;
       }
@@ -2509,7 +2744,9 @@ export class GfnWebRtcClient {
       this.controlChannel = channel;
       this.controlChannel.binaryType = "arraybuffer";
       this.controlChannel.onmessage = (msgEvent) => {
-        void this.onControlChannelMessage(msgEvent.data as string | Blob | ArrayBuffer);
+        void this.onControlChannelMessage(
+          msgEvent.data as string | Blob | ArrayBuffer,
+        );
       };
       this.controlChannel.onclose = () => {
         this.log("Control channel closed");
@@ -2524,10 +2761,14 @@ export class GfnWebRtcClient {
 
     pc.onicecandidateerror = (event: Event) => {
       const e = event as RTCPeerConnectionIceErrorEvent;
-      const hostCandidate = "hostCandidate" in e
-        ? (e as RTCPeerConnectionIceErrorEvent & { hostCandidate?: string }).hostCandidate
-        : undefined;
-      this.log(`ICE candidate error: ${e.errorCode} ${e.errorText} (${e.url ?? "no url"}) hostCandidate=${hostCandidate ?? "?"}`);
+      const hostCandidate =
+        "hostCandidate" in e
+          ? (e as RTCPeerConnectionIceErrorEvent & { hostCandidate?: string })
+              .hostCandidate
+          : undefined;
+      this.log(
+        `ICE candidate error: ${e.errorCode} ${e.errorText} (${e.url ?? "no url"}) hostCandidate=${hostCandidate ?? "?"}`,
+      );
     };
 
     pc.oniceconnectionstatechange = () => {
@@ -2543,7 +2784,9 @@ export class GfnWebRtcClient {
     };
 
     pc.ontrack = (event) => {
-      this.log(`Track received: kind=${event.track.kind}, id=${event.track.id}, readyState=${event.track.readyState}`);
+      this.log(
+        `Track received: kind=${event.track.kind}, id=${event.track.id}, readyState=${event.track.readyState}`,
+      );
       this.attachTrack(event.track);
 
       // Configure low-latency jitter buffer for video and audio receivers
@@ -2554,7 +2797,8 @@ export class GfnWebRtcClient {
 
     // 1. Fix 0.0.0.0 in server's SDP offer with real server IP
     //    The GFN server sends c=IN IP4 0.0.0.0; replace with actual IP
-    const serverIpForSdp = session.mediaConnectionInfo?.ip || session.serverIp || "";
+    const serverIpForSdp =
+      session.mediaConnectionInfo?.ip || session.serverIp || "";
     let processedOffer = offerSdp;
     if (serverIpForSdp) {
       processedOffer = fixServerIp(processedOffer, serverIpForSdp);
@@ -2562,7 +2806,9 @@ export class GfnWebRtcClient {
       // Log any remaining 0.0.0.0 references after fix
       const remaining = (processedOffer.match(/0\.0\.0\.0/g) ?? []).length;
       if (remaining > 0) {
-        this.log(`Warning: ${remaining} occurrences of 0.0.0.0 still remain in SDP after fix`);
+        this.log(
+          `Warning: ${remaining} occurrences of 0.0.0.0 still remain in SDP after fix`,
+        );
       }
     }
 
@@ -2570,17 +2816,23 @@ export class GfnWebRtcClient {
     const serverIceUfrag = extractIceUfragFromOffer(processedOffer);
     this.log(`Server ICE ufrag: "${serverIceUfrag}"`);
 
-    const preferredHevcProfileId = hevcPreferredProfileId(settings.colorQuality);
+    const preferredHevcProfileId = hevcPreferredProfileId(
+      settings.colorQuality,
+    );
 
     // 3. Filter to preferred codec — but only if the browser actually supports it
     let effectiveCodec = settings.codec;
     const supported = this.getSupportedVideoCodecs();
-    this.log(`Browser supported video codecs: ${supported.join(", ") || "unknown"}`);
+    this.log(
+      `Browser supported video codecs: ${supported.join(", ") || "unknown"}`,
+    );
 
     if (settings.codec === "H265") {
       const hevcProfiles = this.getSupportedHevcProfiles();
       if (hevcProfiles.size > 0) {
-        this.log(`Browser HEVC profile-id support: ${Array.from(hevcProfiles).join(", ")}`);
+        this.log(
+          `Browser HEVC profile-id support: ${Array.from(hevcProfiles).join(", ")}`,
+        );
       }
 
       const hevcMaxLevels = this.getHevcMaxLevelsByProfile();
@@ -2588,7 +2840,10 @@ export class GfnWebRtcClient {
         this.log(
           `Browser HEVC max level-id by profile: p1=${hevcMaxLevels[1] ?? "?"}, p2=${hevcMaxLevels[2] ?? "?"}`,
         );
-        const rewrittenLevel = rewriteH265LevelIdByProfile(processedOffer, hevcMaxLevels);
+        const rewrittenLevel = rewriteH265LevelIdByProfile(
+          processedOffer,
+          hevcMaxLevels,
+        );
         if (rewrittenLevel.replacements > 0) {
           this.log(
             `HEVC level compatibility: rewrote ${rewrittenLevel.replacements} fmtp lines to receiver max level-id`,
@@ -2598,7 +2853,9 @@ export class GfnWebRtcClient {
       }
 
       const tierFlagOneSupported = this.supportsHevcTierFlagOne();
-      this.log(`Browser HEVC tier-flag=1 support: ${tierFlagOneSupported ? "yes" : "no"}`);
+      this.log(
+        `Browser HEVC tier-flag=1 support: ${tierFlagOneSupported ? "yes" : "no"}`,
+      );
       if (!tierFlagOneSupported) {
         const rewritten = rewriteH265TierFlag(processedOffer, 0);
         if (rewritten.replacements > 0) {
@@ -2608,7 +2865,10 @@ export class GfnWebRtcClient {
           processedOffer = rewritten.sdp;
         }
       }
-      if (hevcProfiles.size > 0 && !hevcProfiles.has(String(preferredHevcProfileId))) {
+      if (
+        hevcProfiles.size > 0 &&
+        !hevcProfiles.has(String(preferredHevcProfileId))
+      ) {
         this.log(
           `Warning: requested H265 profile-id=${preferredHevcProfileId} not reported in browser capabilities; forcing H265 anyway per user preference`,
         );
@@ -2616,9 +2876,13 @@ export class GfnWebRtcClient {
     }
 
     if (supported.length > 0 && !supported.includes(settings.codec)) {
-      this.log(`Warning: ${settings.codec} not reported in browser codec list; forcing requested codec anyway`);
+      this.log(
+        `Warning: ${settings.codec} not reported in browser codec list; forcing requested codec anyway`,
+      );
     }
-    this.log(`Effective codec: ${effectiveCodec} (preferred HEVC profile-id=${preferredHevcProfileId})`);
+    this.log(
+      `Effective codec: ${effectiveCodec} (preferred HEVC profile-id=${preferredHevcProfileId})`,
+    );
     const filteredOffer = preferCodec(processedOffer, effectiveCodec, {
       preferHevcProfileId: preferredHevcProfileId,
     });
@@ -2672,7 +2936,12 @@ export class GfnWebRtcClient {
         if (line.startsWith("m=") && inVideo) {
           break;
         }
-        if (inVideo && (line.startsWith("a=rtpmap:") || line.startsWith("a=fmtp:") || line.startsWith("a=rtcp-fb:"))) {
+        if (
+          inVideo &&
+          (line.startsWith("a=rtpmap:") ||
+            line.startsWith("a=fmtp:") ||
+            line.startsWith("a=rtcp-fb:"))
+        ) {
           negotiatedVideoLines.push(line);
           if (line.startsWith("a=rtpmap:") && /\sH(?:265|EVC)\//i.test(line)) {
             hasNegotiatedH265 = true;
@@ -2687,12 +2956,16 @@ export class GfnWebRtcClient {
       }
 
       if (effectiveCodec === "H265" && !hasNegotiatedH265) {
-        throw new Error("H265 requested but not negotiated in local SDP (no H265 rtpmap in answer)");
+        throw new Error(
+          "H265 requested but not negotiated in local SDP (no H265 rtpmap in answer)",
+        );
       }
     }
 
     const credentials = extractIceCredentials(finalSdp);
-    this.log(`Extracted ICE credentials: ufrag=${credentials.ufrag}, pwd=${credentials.pwd.slice(0, 8)}...`);
+    this.log(
+      `Extracted ICE credentials: ufrag=${credentials.ufrag}, pwd=${credentials.pwd.slice(0, 8)}...`,
+    );
     const { width, height } = parseResolution(settings.resolution);
 
     const nvstSdp = buildNvstSdp({
@@ -2738,24 +3011,36 @@ export class GfnWebRtcClient {
             injected = true;
             break;
           } catch (error) {
-            this.log(`Manual ICE candidate failed for sdpMid=${mid}: ${String(error)}`);
+            this.log(
+              `Manual ICE candidate failed for sdpMid=${mid}: ${String(error)}`,
+            );
           }
         }
         if (!injected) {
-          this.log("Warning: Could not inject manual ICE candidate on any sdpMid");
+          this.log(
+            "Warning: Could not inject manual ICE candidate on any sdpMid",
+          );
         }
       } else {
-        this.log(`Warning: mediaConnectionInfo present but no valid IP (ip=${mci.ip}, port=${mci.port})`);
+        this.log(
+          `Warning: mediaConnectionInfo present but no valid IP (ip=${mci.ip}, port=${mci.port})`,
+        );
       }
     } else {
-      this.log("No mediaConnectionInfo available — relying on trickle ICE only");
+      this.log(
+        "No mediaConnectionInfo available — relying on trickle ICE only",
+      );
     }
 
-    this.log("=== handleOffer COMPLETE — waiting for ICE connectivity and tracks ===");
+    this.log(
+      "=== handleOffer COMPLETE — waiting for ICE connectivity and tracks ===",
+    );
   }
 
   async addRemoteCandidate(candidate: IceCandidatePayload): Promise<void> {
-    this.log(`Remote ICE candidate received: ${candidate.candidate} (sdpMid=${candidate.sdpMid})`);
+    this.log(
+      `Remote ICE candidate received: ${candidate.candidate} (sdpMid=${candidate.sdpMid})`,
+    );
     const init: RTCIceCandidateInit = {
       candidate: candidate.candidate,
       sdpMid: candidate.sdpMid ?? undefined,

@@ -1,6 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { JSX } from "react";
-import { Maximize, Minimize, Gamepad2, Loader2, LogOut, Clock3, AlertTriangle, Mic, MicOff } from "lucide-react";
+import {
+  Maximize,
+  Minimize,
+  Gamepad2,
+  Loader2,
+  LogOut,
+  Clock3,
+  AlertTriangle,
+  Mic,
+  MicOff,
+} from "lucide-react";
 import type { StreamDiagnostics } from "../gfn/webrtcClient";
 
 interface StreamViewProps {
@@ -57,7 +67,11 @@ function getPacketLossColor(lossPercent: number): string {
   return "var(--error)";
 }
 
-function getTimingColor(valueMs: number, goodMax: number, warningMax: number): string {
+function getTimingColor(
+  valueMs: number,
+  goodMax: number,
+  warningMax: number,
+): string {
   if (valueMs <= 0) return "var(--ink-muted)";
   if (valueMs <= goodMax) return "var(--success)";
   if (valueMs <= warningMax) return "var(--warning)";
@@ -137,13 +151,13 @@ export function StreamView({
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+  // useEffect(() => {
+  //   const handleFullscreenChange = () => {
+  //     setIsFullscreen(!!document.fullscreenElement);
+  //   };
+  //   document.addEventListener("fullscreenchange", handleFullscreenChange);
+  //   return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  // }, []);
 
   useEffect(() => {
     if (isConnecting) {
@@ -151,8 +165,14 @@ export function StreamView({
       return;
     }
 
-    const intervalMinutes = Math.max(0, Math.floor(sessionClockShowEveryMinutes || 0));
-    const durationSeconds = Math.max(1, Math.floor(sessionClockShowDurationSeconds || 1));
+    const intervalMinutes = Math.max(
+      0,
+      Math.floor(sessionClockShowEveryMinutes || 0),
+    );
+    const durationSeconds = Math.max(
+      1,
+      Math.floor(sessionClockShowDurationSeconds || 1),
+    );
     const intervalMs = intervalMinutes * 60 * 1000;
     const durationMs = durationSeconds * 1000;
 
@@ -186,7 +206,11 @@ export function StreamView({
         window.clearInterval(periodicTimer);
       }
     };
-  }, [isConnecting, sessionClockShowDurationSeconds, sessionClockShowEveryMinutes]);
+  }, [
+    isConnecting,
+    sessionClockShowDurationSeconds,
+    sessionClockShowEveryMinutes,
+  ]);
 
   const bitrateMbps = (stats.bitrateKbps / 1000).toFixed(1);
   const hasResolution = stats.resolution && stats.resolution !== "";
@@ -196,13 +220,24 @@ export function StreamView({
   const renderColor = getTimingColor(stats.renderTimeMs, 12, 22);
   const jitterBufferColor = getTimingColor(stats.jitterBufferDelayMs, 10, 24);
   const lossColor = getPacketLossColor(stats.packetLossPercent);
-  const dText = stats.decodeTimeMs > 0 ? `${stats.decodeTimeMs.toFixed(1)}ms` : "--";
-  const rText = stats.renderTimeMs > 0 ? `${stats.renderTimeMs.toFixed(1)}ms` : "--";
-  const jbText = stats.jitterBufferDelayMs > 0 ? `${stats.jitterBufferDelayMs.toFixed(1)}ms` : "--";
+  const dText =
+    stats.decodeTimeMs > 0 ? `${stats.decodeTimeMs.toFixed(1)}ms` : "--";
+  const rText =
+    stats.renderTimeMs > 0 ? `${stats.renderTimeMs.toFixed(1)}ms` : "--";
+  const jbText =
+    stats.jitterBufferDelayMs > 0
+      ? `${stats.jitterBufferDelayMs.toFixed(1)}ms`
+      : "--";
   const inputLive = stats.inputReady && stats.connectionState === "connected";
-  const escHoldProgress = Math.max(0, Math.min(1, escHoldReleaseIndicator.progress));
+  const escHoldProgress = Math.max(
+    0,
+    Math.min(1, escHoldReleaseIndicator.progress),
+  );
   const escHoldSecondsLeft = Math.max(0, 5 - Math.floor(escHoldProgress * 5));
-  const inputQueueColor = getInputQueueColor(stats.inputQueueBufferedBytes, stats.inputQueueDropCount);
+  const inputQueueColor = getInputQueueColor(
+    stats.inputQueueBufferedBytes,
+    stats.inputQueueDropCount,
+  );
   const inputQueueText = `${(stats.inputQueueBufferedBytes / 1024).toFixed(1)}KB`;
   const warningSeconds = formatWarningSeconds(streamWarning?.secondsLeft);
   const sessionTimeText = formatElapsed(sessionElapsedSeconds);
@@ -211,22 +246,29 @@ export function StreamView({
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Combined ref callback that sets both local and forwarded ref
-  const setVideoRef = useCallback((element: HTMLVideoElement | null) => {
-    localVideoRef.current = element;
-    // Forward to parent ref
-    if (typeof videoRef === "function") {
-      videoRef(element);
-    } else if (videoRef && "current" in videoRef) {
-      (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = element;
-    }
-  }, [videoRef]);
+  const setVideoRef = useCallback(
+    (element: HTMLVideoElement | null) => {
+      localVideoRef.current = element;
+      // Forward to parent ref
+      if (typeof videoRef === "function") {
+        videoRef(element);
+      } else if (videoRef && "current" in videoRef) {
+        (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current =
+          element;
+      }
+    },
+    [videoRef],
+  );
 
   // Focus video element when stream is ready (not connecting anymore)
   useEffect(() => {
     if (!isConnecting && localVideoRef.current && hasResolution) {
       // Small delay to ensure DOM is ready
       const timer = window.setTimeout(() => {
-        if (localVideoRef.current && document.activeElement !== localVideoRef.current) {
+        if (
+          localVideoRef.current &&
+          document.activeElement !== localVideoRef.current
+        ) {
           localVideoRef.current.focus();
           console.log("[StreamView] Focused video element");
         }
@@ -238,16 +280,19 @@ export function StreamView({
   return (
     <div className="sv">
       {/* Video element */}
-      <video 
-        ref={setVideoRef} 
-        autoPlay 
-        playsInline 
-        muted 
-        tabIndex={0} 
+      <video
+        ref={setVideoRef}
+        autoPlay
+        playsInline
+        muted
+        tabIndex={0}
         className="sv-video"
         onClick={() => {
           // Ensure video has focus when clicked for pointer lock to work
-          if (localVideoRef.current && document.activeElement !== localVideoRef.current) {
+          if (
+            localVideoRef.current &&
+            document.activeElement !== localVideoRef.current
+          ) {
             localVideoRef.current.focus();
           }
         }}
@@ -301,11 +346,17 @@ export function StreamView({
         <div className="sv-stats">
           <div className="sv-stats-head">
             {hasResolution ? (
-              <span className="sv-stats-primary">{stats.resolution} · {stats.decodeFps}fps</span>
+              <span className="sv-stats-primary">
+                {stats.resolution} · {stats.decodeFps}fps
+              </span>
             ) : (
-              <span className="sv-stats-primary sv-stats-wait">Connecting...</span>
+              <span className="sv-stats-primary sv-stats-wait">
+                Connecting...
+              </span>
             )}
-            <span className={`sv-stats-live ${inputLive ? "is-live" : "is-pending"}`}>
+            <span
+              className={`sv-stats-live ${inputLive ? "is-live" : "is-pending"}`}
+            >
               {inputLive ? "Live" : "Sync"}
             </span>
           </div>
@@ -320,27 +371,66 @@ export function StreamView({
 
           <div className="sv-stats-metrics">
             <span className="sv-stats-chip" title="Round-trip network latency">
-              RTT <span className="sv-stats-chip-val" style={{ color: getRttColor(stats.rttMs) }}>{stats.rttMs > 0 ? `${stats.rttMs.toFixed(0)}ms` : "--"}</span>
+              RTT{" "}
+              <span
+                className="sv-stats-chip-val"
+                style={{ color: getRttColor(stats.rttMs) }}
+              >
+                {stats.rttMs > 0 ? `${stats.rttMs.toFixed(0)}ms` : "--"}
+              </span>
             </span>
             <span className="sv-stats-chip" title="D = decode time">
-              D <span className="sv-stats-chip-val" style={{ color: decodeColor }}>{dText}</span>
+              D{" "}
+              <span
+                className="sv-stats-chip-val"
+                style={{ color: decodeColor }}
+              >
+                {dText}
+              </span>
             </span>
             <span className="sv-stats-chip" title="R = render time">
-              R <span className="sv-stats-chip-val" style={{ color: renderColor }}>{rText}</span>
+              R{" "}
+              <span
+                className="sv-stats-chip-val"
+                style={{ color: renderColor }}
+              >
+                {rText}
+              </span>
             </span>
             <span className="sv-stats-chip" title="JB = jitter buffer delay">
-              JB <span className="sv-stats-chip-val" style={{ color: jitterBufferColor }}>{jbText}</span>
+              JB{" "}
+              <span
+                className="sv-stats-chip-val"
+                style={{ color: jitterBufferColor }}
+              >
+                {jbText}
+              </span>
             </span>
             <span className="sv-stats-chip" title="Packet loss percentage">
-              Loss <span className="sv-stats-chip-val" style={{ color: lossColor }}>{stats.packetLossPercent.toFixed(2)}%</span>
+              Loss{" "}
+              <span className="sv-stats-chip-val" style={{ color: lossColor }}>
+                {stats.packetLossPercent.toFixed(2)}%
+              </span>
             </span>
-            <span className="sv-stats-chip" title="Input queue pressure (buffered bytes and delayed flush)">
-              IQ <span className="sv-stats-chip-val" style={{ color: inputQueueColor }}>{inputQueueText}</span>
+            <span
+              className="sv-stats-chip"
+              title="Input queue pressure (buffered bytes and delayed flush)"
+            >
+              IQ{" "}
+              <span
+                className="sv-stats-chip-val"
+                style={{ color: inputQueueColor }}
+              >
+                {inputQueueText}
+              </span>
             </span>
           </div>
 
           <div className="sv-stats-foot">
-            Input queue peak {(stats.inputQueuePeakBufferedBytes / 1024).toFixed(1)}KB · drops {stats.inputQueueDropCount} · sched {stats.inputQueueMaxSchedulingDelayMs.toFixed(1)}ms
+            Input queue peak{" "}
+            {(stats.inputQueuePeakBufferedBytes / 1024).toFixed(1)}KB · drops{" "}
+            {stats.inputQueueDropCount} · sched{" "}
+            {stats.inputQueueMaxSchedulingDelayMs.toFixed(1)}ms
           </div>
 
           {(stats.gpuType || regionLabel) && (
@@ -353,9 +443,14 @@ export function StreamView({
 
       {/* Controller indicator (top-left) */}
       {connectedControllers > 0 && !isConnecting && (
-        <div className="sv-ctrl" title={`${connectedControllers} controller(s) connected`}>
+        <div
+          className="sv-ctrl"
+          title={`${connectedControllers} controller(s) connected`}
+        >
           <Gamepad2 size={18} />
-          {connectedControllers > 1 && <span className="sv-ctrl-n">{connectedControllers}</span>}
+          {connectedControllers > 1 && (
+            <span className="sv-ctrl-n">{connectedControllers}</span>
+          )}
         </div>
       )}
 
@@ -376,7 +471,10 @@ export function StreamView({
 
       {/* Anti-AFK indicator (top-left, below controller badge when present) */}
       {antiAfkEnabled && !isConnecting && (
-        <div className={`sv-afk${connectedControllers > 0 ? " sv-afk--stacked" : ""}`} title="Anti-AFK is enabled">
+        <div
+          className={`sv-afk${connectedControllers > 0 ? " sv-afk--stacked" : ""}`}
+          title="Anti-AFK is enabled"
+        >
           <span className="sv-afk-dot" />
           <span className="sv-afk-label">ANTI-AFK ON</span>
         </div>
@@ -386,21 +484,34 @@ export function StreamView({
       {escHoldReleaseIndicator.visible && !isConnecting && (
         <>
           <div className="sv-esc-hold-backdrop" />
-          <div className="sv-esc-hold" title="Keep holding Escape to release mouse lock">
-            <div className="sv-esc-hold-title">Hold Escape to Release Mouse</div>
+          <div
+            className="sv-esc-hold"
+            title="Keep holding Escape to release mouse lock"
+          >
+            <div className="sv-esc-hold-title">
+              Hold Escape to Release Mouse
+            </div>
             <div className="sv-esc-hold-head">
               <span>Keep holding…</span>
               <span>{escHoldSecondsLeft}s</span>
             </div>
             <div className="sv-esc-hold-track">
-              <span className="sv-esc-hold-fill" style={{ transform: `scaleX(${escHoldProgress})` }} />
+              <span
+                className="sv-esc-hold-fill"
+                style={{ transform: `scaleX(${escHoldProgress})` }}
+              />
             </div>
           </div>
         </>
       )}
 
       {exitPrompt.open && !isConnecting && (
-        <div className="sv-exit" role="dialog" aria-modal="true" aria-label="Exit stream confirmation">
+        <div
+          className="sv-exit"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Exit stream confirmation"
+        >
           <button
             type="button"
             className="sv-exit-backdrop"
@@ -411,14 +522,25 @@ export function StreamView({
             <div className="sv-exit-kicker">Session Control</div>
             <h3 className="sv-exit-title">Exit Stream?</h3>
             <p className="sv-exit-text">
-              Do you really want to exit <strong>{exitPrompt.gameTitle}</strong>?
+              Do you really want to exit <strong>{exitPrompt.gameTitle}</strong>
+              ?
             </p>
-            <p className="sv-exit-subtext">Your current cloud gaming session will be closed.</p>
+            <p className="sv-exit-subtext">
+              Your current cloud gaming session will be closed.
+            </p>
             <div className="sv-exit-actions">
-              <button type="button" className="sv-exit-btn sv-exit-btn-cancel" onClick={onCancelExit}>
+              <button
+                type="button"
+                className="sv-exit-btn sv-exit-btn-cancel"
+                onClick={onCancelExit}
+              >
                 Keep Playing
               </button>
-              <button type="button" className="sv-exit-btn sv-exit-btn-confirm" onClick={onConfirmExit}>
+              <button
+                type="button"
+                className="sv-exit-btn sv-exit-btn-confirm"
+                onClick={onConfirmExit}
+              >
                 Exit Stream
               </button>
             </div>
@@ -456,10 +578,24 @@ export function StreamView({
       {/* Keyboard hints */}
       {showHints && !isConnecting && (
         <div className="sv-hints">
-          <div className="sv-hint"><kbd>{shortcuts.toggleStats}</kbd><span>Stats</span></div>
-          <div className="sv-hint"><kbd>{shortcuts.togglePointerLock}</kbd><span>Mouse lock</span></div>
-          <div className="sv-hint"><kbd>{shortcuts.stopStream}</kbd><span>Stop</span></div>
-          {shortcuts.toggleMicrophone && <div className="sv-hint"><kbd>{shortcuts.toggleMicrophone}</kbd><span>Mic</span></div>}
+          <div className="sv-hint">
+            <kbd>{shortcuts.toggleStats}</kbd>
+            <span>Stats</span>
+          </div>
+          <div className="sv-hint">
+            <kbd>{shortcuts.togglePointerLock}</kbd>
+            <span>Mouse lock</span>
+          </div>
+          <div className="sv-hint">
+            <kbd>{shortcuts.stopStream}</kbd>
+            <span>Stop</span>
+          </div>
+          {shortcuts.toggleMicrophone && (
+            <div className="sv-hint">
+              <kbd>{shortcuts.toggleMicrophone}</kbd>
+              <span>Mic</span>
+            </div>
+          )}
         </div>
       )}
 
