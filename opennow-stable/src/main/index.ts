@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, dialog, systemPreferences, session } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  systemPreferences,
+  session,
+} from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
@@ -33,7 +40,13 @@ import type {
 
 import { getSettingsManager, type SettingsManager } from "./settings";
 
-import { createSession, pollSession, stopSession, getActiveSessions, claimSession } from "./gfn/cloudmatch";
+import {
+  createSession,
+  pollSession,
+  stopSession,
+  getActiveSessions,
+  claimSession,
+} from "./gfn/cloudmatch";
 import { AuthService } from "./gfn/auth";
 import {
   fetchLibraryGames,
@@ -44,6 +57,7 @@ import {
 import { fetchSubscription, fetchDynamicRegions } from "./gfn/subscription";
 import { GfnSignalingClient } from "./gfn/signaling";
 import { isSessionError, SessionError, GfnErrorCode } from "./gfn/errorCodes";
+import { getArgument } from "./botHelpers";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -55,7 +69,9 @@ interface BootstrapVideoPreferences {
   encoderPreference: VideoAccelerationPreference;
 }
 
-function isAccelerationPreference(value: unknown): value is VideoAccelerationPreference {
+function isAccelerationPreference(
+  value: unknown,
+): value is VideoAccelerationPreference {
   return value === "auto" || value === "hardware" || value === "software";
 }
 
@@ -69,7 +85,9 @@ function loadBootstrapVideoPreferences(): BootstrapVideoPreferences {
     if (!existsSync(settingsPath)) {
       return defaults;
     }
-    const parsed = JSON.parse(readFileSync(settingsPath, "utf-8")) as Partial<BootstrapVideoPreferences>;
+    const parsed = JSON.parse(
+      readFileSync(settingsPath, "utf-8"),
+    ) as Partial<BootstrapVideoPreferences>;
     return {
       decoderPreference: isAccelerationPreference(parsed.decoderPreference)
         ? parsed.decoderPreference
@@ -90,7 +108,9 @@ console.log(
 
 // --- Platform-specific HW video decode features ---
 const platformFeatures: string[] = [];
-const isLinuxArm = process.platform === "linux" && (process.arch === "arm64" || process.arch === "arm");
+const isLinuxArm =
+  process.platform === "linux" &&
+  (process.arch === "arm64" || process.arch === "arm");
 
 if (process.platform === "win32") {
   // Windows: D3D11 + Media Foundation path for HW decode/encode acceleration
@@ -127,7 +147,8 @@ if (process.platform === "win32") {
 }
 // macOS: VideoToolbox handles HW acceleration natively, no extra feature flags needed
 
-app.commandLine.appendSwitch("enable-features",
+app.commandLine.appendSwitch(
+  "enable-features",
   [
     // --- AV1 support (cross-platform) ---
     "Dav1dVideoDecoder", // Fast AV1 software fallback via dav1d (if no HW decoder)
@@ -148,7 +169,8 @@ if (process.platform === "linux" && !isLinuxArm) {
 }
 app.commandLine.appendSwitch("disable-features", disableFeatures.join(","));
 
-app.commandLine.appendSwitch("force-fieldtrials",
+app.commandLine.appendSwitch(
+  "force-fieldtrials",
   [
     // Disable send-side pacing — we are receive-only, pacing adds latency to RTCP feedback
     "WebRTC-Video-Pacing/Disabled/",
@@ -194,7 +216,9 @@ function emitToRenderer(event: MainToRendererSignalingEvent): void {
 async function createMainWindow(): Promise<void> {
   const preloadMjsPath = join(__dirname, "../preload/index.mjs");
   const preloadJsPath = join(__dirname, "../preload/index.js");
-  const preloadPath = existsSync(preloadMjsPath) ? preloadMjsPath : preloadJsPath;
+  const preloadPath = existsSync(preloadMjsPath)
+    ? preloadMjsPath
+    : preloadJsPath;
 
   const settings = settingsManager.getAll();
 
@@ -228,13 +252,21 @@ async function createMainWindow(): Promise<void> {
     // Keep native window fullscreen in sync with HTML fullscreen so Windows treats
     // stream playback like a real fullscreen window instead of only DOM fullscreen.
     mainWindow.webContents.on("enter-html-full-screen", () => {
-      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFullScreen()) {
+      if (
+        mainWindow &&
+        !mainWindow.isDestroyed() &&
+        !mainWindow.isFullScreen()
+      ) {
         mainWindow.setFullScreen(true);
       }
     });
 
     mainWindow.webContents.on("leave-html-full-screen", () => {
-      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFullScreen()) {
+      if (
+        mainWindow &&
+        !mainWindow.isDestroyed() &&
+        mainWindow.isFullScreen()
+      ) {
         mainWindow.setFullScreen(false);
       }
     });
@@ -302,133 +334,190 @@ function rethrowSerializedSessionError(error: unknown): never {
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle(IPC_CHANNELS.AUTH_GET_SESSION, async (_event, payload: AuthSessionRequest = {}) => {
-    return authService.ensureValidSessionWithStatus(Boolean(payload.forceRefresh));
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_GET_SESSION,
+    async (_event, payload: AuthSessionRequest = {}) => {
+      return authService.ensureValidSessionWithStatus(
+        Boolean(payload.forceRefresh),
+      );
+    },
+  );
 
   ipcMain.handle(IPC_CHANNELS.AUTH_GET_PROVIDERS, async () => {
     return authService.getProviders();
   });
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_GET_REGIONS, async (_event, payload: RegionsFetchRequest) => {
-    return authService.getRegions(payload?.token);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_GET_REGIONS,
+    async (_event, payload: RegionsFetchRequest) => {
+      return authService.getRegions(payload?.token);
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.AUTH_LOGIN, async (_event, payload: AuthLoginRequest) => {
-    return authService.login(payload);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_LOGIN,
+    async (_event, payload: AuthLoginRequest) => {
+      return authService.login(payload);
+    },
+  );
 
   ipcMain.handle(IPC_CHANNELS.AUTH_LOGOUT, async () => {
     await authService.logout();
   });
 
-  ipcMain.handle(IPC_CHANNELS.SUBSCRIPTION_FETCH, async (_event, payload: SubscriptionFetchRequest) => {
-    const token = await resolveJwt(payload?.token);
-    const streamingBaseUrl =
-      payload?.providerStreamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-    const userId = payload.userId;
+  ipcMain.handle(
+    IPC_CHANNELS.SUBSCRIPTION_FETCH,
+    async (_event, payload: SubscriptionFetchRequest) => {
+      const token = await resolveJwt(payload?.token);
+      const streamingBaseUrl =
+        payload?.providerStreamingBaseUrl ??
+        authService.getSelectedProvider().streamingServiceUrl;
+      const userId = payload.userId;
 
-    // Fetch dynamic regions to get the VPC ID (handles Alliance partners correctly)
-    const { vpcId } = await fetchDynamicRegions(token, streamingBaseUrl);
+      // Fetch dynamic regions to get the VPC ID (handles Alliance partners correctly)
+      const { vpcId } = await fetchDynamicRegions(token, streamingBaseUrl);
 
-    return fetchSubscription(token, userId, vpcId ?? undefined);
-  });
+      return fetchSubscription(token, userId, vpcId ?? undefined);
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.GAMES_FETCH_MAIN, async (_event, payload: GamesFetchRequest) => {
-    const token = await resolveJwt(payload?.token);
-    const streamingBaseUrl =
-      payload?.providerStreamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-    return fetchMainGames(token, streamingBaseUrl);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.GAMES_FETCH_MAIN,
+    async (_event, payload: GamesFetchRequest) => {
+      const token = await resolveJwt(payload?.token);
+      const streamingBaseUrl =
+        payload?.providerStreamingBaseUrl ??
+        authService.getSelectedProvider().streamingServiceUrl;
+      return fetchMainGames(token, streamingBaseUrl);
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.GAMES_FETCH_LIBRARY, async (_event, payload: GamesFetchRequest) => {
-    const token = await resolveJwt(payload?.token);
-    const streamingBaseUrl =
-      payload?.providerStreamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-    return fetchLibraryGames(token, streamingBaseUrl);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.GAMES_FETCH_LIBRARY,
+    async (_event, payload: GamesFetchRequest) => {
+      const token = await resolveJwt(payload?.token);
+      const streamingBaseUrl =
+        payload?.providerStreamingBaseUrl ??
+        authService.getSelectedProvider().streamingServiceUrl;
+      return fetchLibraryGames(token, streamingBaseUrl);
+    },
+  );
 
   ipcMain.handle(IPC_CHANNELS.GAMES_FETCH_PUBLIC, async () => {
     return fetchPublicGames();
   });
 
-  ipcMain.handle(IPC_CHANNELS.GAMES_RESOLVE_LAUNCH_ID, async (_event, payload: ResolveLaunchIdRequest) => {
-    const token = await resolveJwt(payload?.token);
-    const streamingBaseUrl =
-      payload?.providerStreamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-    return resolveLaunchAppId(token, payload.appIdOrUuid, streamingBaseUrl);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.GAMES_RESOLVE_LAUNCH_ID,
+    async (_event, payload: ResolveLaunchIdRequest) => {
+      const token = await resolveJwt(payload?.token);
+      const streamingBaseUrl =
+        payload?.providerStreamingBaseUrl ??
+        authService.getSelectedProvider().streamingServiceUrl;
+      return resolveLaunchAppId(token, payload.appIdOrUuid, streamingBaseUrl);
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.CREATE_SESSION, async (_event, payload: SessionCreateRequest) => {
-    try {
-      const token = await resolveJwt(payload.token);
-      const streamingBaseUrl = payload.streamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-      return createSession({
-        ...payload,
-        token,
-        streamingBaseUrl,
-      });
-    } catch (error) {
-      rethrowSerializedSessionError(error);
-    }
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.CREATE_SESSION,
+    async (_event, payload: SessionCreateRequest) => {
+      try {
+        const token = await resolveJwt(payload.token);
+        const streamingBaseUrl =
+          payload.streamingBaseUrl ??
+          authService.getSelectedProvider().streamingServiceUrl;
+        return createSession({
+          ...payload,
+          token,
+          streamingBaseUrl,
+        });
+      } catch (error) {
+        rethrowSerializedSessionError(error);
+      }
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.POLL_SESSION, async (_event, payload: SessionPollRequest) => {
-    try {
-      const token = await resolveJwt(payload.token);
-      return pollSession({
-        ...payload,
-        token,
-        streamingBaseUrl: payload.streamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl,
-      });
-    } catch (error) {
-      rethrowSerializedSessionError(error);
-    }
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.POLL_SESSION,
+    async (_event, payload: SessionPollRequest) => {
+      try {
+        const token = await resolveJwt(payload.token);
+        return pollSession({
+          ...payload,
+          token,
+          streamingBaseUrl:
+            payload.streamingBaseUrl ??
+            authService.getSelectedProvider().streamingServiceUrl,
+        });
+      } catch (error) {
+        rethrowSerializedSessionError(error);
+      }
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.STOP_SESSION, async (_event, payload: SessionStopRequest) => {
-    try {
-      const token = await resolveJwt(payload.token);
-      return stopSession({
-        ...payload,
-        token,
-        streamingBaseUrl: payload.streamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl,
-      });
-    } catch (error) {
-      rethrowSerializedSessionError(error);
-    }
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.STOP_SESSION,
+    async (_event, payload: SessionStopRequest) => {
+      try {
+        const token = await resolveJwt(payload.token);
+        return stopSession({
+          ...payload,
+          token,
+          streamingBaseUrl:
+            payload.streamingBaseUrl ??
+            authService.getSelectedProvider().streamingServiceUrl,
+        });
+      } catch (error) {
+        rethrowSerializedSessionError(error);
+      }
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.GET_ACTIVE_SESSIONS, async (_event, token?: string, streamingBaseUrl?: string) => {
-    const jwt = await resolveJwt(token);
-    const baseUrl = streamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-    return getActiveSessions(jwt, baseUrl);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.GET_ACTIVE_SESSIONS,
+    async (_event, token?: string, streamingBaseUrl?: string) => {
+      const jwt = await resolveJwt(token);
+      const baseUrl =
+        streamingBaseUrl ??
+        authService.getSelectedProvider().streamingServiceUrl;
+      return getActiveSessions(jwt, baseUrl);
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.CLAIM_SESSION, async (_event, payload: SessionClaimRequest) => {
-    try {
-      const token = await resolveJwt(payload.token);
-      const streamingBaseUrl = payload.streamingBaseUrl ?? authService.getSelectedProvider().streamingServiceUrl;
-      return claimSession({
-        ...payload,
-        token,
-        streamingBaseUrl,
-      });
-    } catch (error) {
-      rethrowSerializedSessionError(error);
-    }
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.CLAIM_SESSION,
+    async (_event, payload: SessionClaimRequest) => {
+      try {
+        const token = await resolveJwt(payload.token);
+        const streamingBaseUrl =
+          payload.streamingBaseUrl ??
+          authService.getSelectedProvider().streamingServiceUrl;
+        return claimSession({
+          ...payload,
+          token,
+          streamingBaseUrl,
+        });
+      } catch (error) {
+        rethrowSerializedSessionError(error);
+      }
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.SESSION_CONFLICT_DIALOG, async (): Promise<SessionConflictChoice> => {
-    return showSessionConflictDialog();
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.SESSION_CONFLICT_DIALOG,
+    async (): Promise<SessionConflictChoice> => {
+      return showSessionConflictDialog();
+    },
+  );
 
   ipcMain.handle(
     IPC_CHANNELS.CONNECT_SIGNALING,
     async (_event, payload: SignalingConnectRequest): Promise<void> => {
       const nextKey = `${payload.sessionId}|${payload.signalingServer}|${payload.signalingUrl ?? ""}`;
       if (signalingClient && signalingClientKey === nextKey) {
-        console.log("[Signaling] Reuse existing signaling connection (duplicate connect request ignored)");
+        console.log(
+          "[Signaling] Reuse existing signaling connection (duplicate connect request ignored)",
+        );
         return;
       }
 
@@ -453,19 +542,25 @@ function registerIpcHandlers(): void {
     signalingClientKey = null;
   });
 
-  ipcMain.handle(IPC_CHANNELS.SEND_ANSWER, async (_event, payload: SendAnswerRequest) => {
-    if (!signalingClient) {
-      throw new Error("Signaling is not connected");
-    }
-    return signalingClient.sendAnswer(payload);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.SEND_ANSWER,
+    async (_event, payload: SendAnswerRequest) => {
+      if (!signalingClient) {
+        throw new Error("Signaling is not connected");
+      }
+      return signalingClient.sendAnswer(payload);
+    },
+  );
 
-  ipcMain.handle(IPC_CHANNELS.SEND_ICE_CANDIDATE, async (_event, payload: IceCandidatePayload) => {
-    if (!signalingClient) {
-      throw new Error("Signaling is not connected");
-    }
-    return signalingClient.sendIceCandidate(payload);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.SEND_ICE_CANDIDATE,
+    async (_event, payload: IceCandidatePayload) => {
+      if (!signalingClient) {
+        throw new Error("Signaling is not connected");
+      }
+      return signalingClient.sendIceCandidate(payload);
+    },
+  );
 
   // Toggle fullscreen via IPC (for completeness)
   ipcMain.handle(IPC_CHANNELS.TOGGLE_FULLSCREEN, async () => {
@@ -487,18 +582,28 @@ function registerIpcHandlers(): void {
     return settingsManager.getAll();
   });
 
-  ipcMain.handle(IPC_CHANNELS.SETTINGS_SET, async <K extends keyof Settings>(_event: Electron.IpcMainInvokeEvent, key: K, value: Settings[K]) => {
-    settingsManager.set(key, value);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.SETTINGS_SET,
+    async <K extends keyof Settings>(
+      _event: Electron.IpcMainInvokeEvent,
+      key: K,
+      value: Settings[K],
+    ) => {
+      settingsManager.set(key, value);
+    },
+  );
 
   ipcMain.handle(IPC_CHANNELS.SETTINGS_RESET, async (): Promise<Settings> => {
     return settingsManager.reset();
   });
 
   // Logs export IPC handler
-  ipcMain.handle(IPC_CHANNELS.LOGS_EXPORT, async (_event, format: "text" | "json" = "text"): Promise<string> => {
-    return exportLogs(format);
-  });
+  ipcMain.handle(
+    IPC_CHANNELS.LOGS_EXPORT,
+    async (_event, format: "text" | "json" = "text"): Promise<string> => {
+      return exportLogs(format);
+    },
+  );
 
   // Save window size when it changes
   mainWindow?.on("resize", () => {
@@ -514,7 +619,11 @@ app.whenReady().then(async () => {
   // Initialize log capture first to capture all console output
   initLogCapture("main");
 
-  authService = new AuthService(join(app.getPath("userData"), "auth-state.json"));
+  const profileIndex = getArgument("profile-index");
+
+  authService = new AuthService(
+    join(app.getPath("userData"), "auth-state-" + profileIndex + ".json"),
+  );
   await authService.initialize();
 
   settingsManager = getSettingsManager();
@@ -530,44 +639,50 @@ app.whenReady().then(async () => {
   }
 
   // Set up permission handlers for getUserMedia, fullscreen, pointer lock
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    const url = webContents.getURL();
-    console.log(`[Main] Permission request: ${permission} from ${url}`);
+  session.defaultSession.setPermissionRequestHandler(
+    (webContents, permission, callback) => {
+      const url = webContents.getURL();
+      console.log(`[Main] Permission request: ${permission} from ${url}`);
 
-    const allowedPermissions = new Set([
-      "media",
-      "microphone",
-      "fullscreen",
-      "automatic-fullscreen",
-      "pointerLock",
-      "keyboardLock",
-      "speaker-selection",
-    ]);
+      const allowedPermissions = new Set([
+        "media",
+        "microphone",
+        "fullscreen",
+        "automatic-fullscreen",
+        "pointerLock",
+        "keyboardLock",
+        "speaker-selection",
+      ]);
 
-    if (allowedPermissions.has(permission)) {
-      console.log(`[Main] Granting permission: ${permission}`);
-      callback(true);
-      return;
-    }
+      if (allowedPermissions.has(permission)) {
+        console.log(`[Main] Granting permission: ${permission}`);
+        callback(true);
+        return;
+      }
 
-    callback(false);
-  });
+      callback(false);
+    },
+  );
 
-  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
-    console.log(`[Main] Permission check: ${permission} from ${requestingOrigin}`);
+  session.defaultSession.setPermissionCheckHandler(
+    (webContents, permission, requestingOrigin) => {
+      console.log(
+        `[Main] Permission check: ${permission} from ${requestingOrigin}`,
+      );
 
-    const allowedPermissions = new Set([
-      "media",
-      "microphone",
-      "fullscreen",
-      "automatic-fullscreen",
-      "pointerLock",
-      "keyboardLock",
-      "speaker-selection",
-    ]);
+      const allowedPermissions = new Set([
+        "media",
+        "microphone",
+        "fullscreen",
+        "automatic-fullscreen",
+        "pointerLock",
+        "keyboardLock",
+        "speaker-selection",
+      ]);
 
-    return allowedPermissions.has(permission);
-  });
+      return allowedPermissions.has(permission);
+    },
+  );
 
   registerIpcHandlers();
   await createMainWindow();

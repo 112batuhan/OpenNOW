@@ -6,6 +6,7 @@ import net from "node:net";
 import os from "node:os";
 
 import { shell } from "electron";
+import { runLoginScript } from "../botHelpers";
 
 import type {
   AuthLoginRequest,
@@ -101,7 +102,8 @@ function normalizeProvider(provider: LoginProvider): LoginProvider {
 function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   const padding = normalized.length % 4;
-  const padded = padding === 0 ? normalized : `${normalized}${"=".repeat(4 - padding)}`;
+  const padded =
+    padding === 0 ? normalized : `${normalized}${"=".repeat(4 - padding)}`;
   return Buffer.from(padded, "base64").toString("utf8");
 }
 
@@ -118,7 +120,10 @@ function parseJwtPayload<T>(token: string): T | null {
   }
 }
 
-function toExpiresAt(expiresInSeconds: number | undefined, defaultSeconds = 86400): number {
+function toExpiresAt(
+  expiresInSeconds: number | undefined,
+  defaultSeconds = 86400,
+): number {
   return Date.now() + (expiresInSeconds ?? defaultSeconds) * 1000;
 }
 
@@ -129,7 +134,10 @@ function isExpired(expiresAt: number | undefined): boolean {
   return expiresAt <= Date.now();
 }
 
-function isNearExpiry(expiresAt: number | undefined, windowMs: number): boolean {
+function isNearExpiry(
+  expiresAt: number | undefined,
+  windowMs: number,
+): boolean {
   if (!expiresAt) {
     return true;
   }
@@ -139,7 +147,9 @@ function isNearExpiry(expiresAt: number | undefined, windowMs: number): boolean 
 function generateDeviceId(): string {
   const host = os.hostname();
   const username = os.userInfo().username;
-  return createHash("sha256").update(`${host}:${username}:opennow-stable`).digest("hex");
+  return createHash("sha256")
+    .update(`${host}:${username}:opennow-stable`)
+    .digest("hex");
 }
 
 function generatePkce(): { verifier: string; challenge: string } {
@@ -160,7 +170,11 @@ function generatePkce(): { verifier: string; challenge: string } {
   return { verifier, challenge };
 }
 
-function buildAuthUrl(provider: LoginProvider, challenge: string, port: number): string {
+function buildAuthUrl(
+  provider: LoginProvider,
+  challenge: string,
+  port: number,
+): string {
   const redirectUri = `http://localhost:${port}`;
   const nonce = randomBytes(16).toString("hex");
   const params = new URLSearchParams({
@@ -200,7 +214,10 @@ async function findAvailablePort(): Promise<number> {
   throw new Error("No available OAuth callback ports");
 }
 
-async function waitForAuthorizationCode(port: number, timeoutMs: number): Promise<string> {
+async function waitForAuthorizationCode(
+  port: number,
+  timeoutMs: number,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const server = createServer((request, response) => {
       const url = new URL(request.url ?? "/", `http://localhost:${port}`);
@@ -228,7 +245,9 @@ async function waitForAuthorizationCode(port: number, timeoutMs: number): Promis
 
     server.listen(port, "127.0.0.1", () => {
       const timer = setTimeout(() => {
-        server.close(() => reject(new Error("Timed out waiting for OAuth callback")));
+        server.close(() =>
+          reject(new Error("Timed out waiting for OAuth callback")),
+        );
       }, timeoutMs);
 
       server.once("close", () => clearTimeout(timer));
@@ -236,7 +255,11 @@ async function waitForAuthorizationCode(port: number, timeoutMs: number): Promis
   });
 }
 
-async function exchangeAuthorizationCode(code: string, verifier: string, port: number): Promise<AuthTokens> {
+async function exchangeAuthorizationCode(
+  code: string,
+  verifier: string,
+  port: number,
+): Promise<AuthTokens> {
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
@@ -258,7 +281,9 @@ async function exchangeAuthorizationCode(code: string, verifier: string, port: n
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Token exchange failed (${response.status}): ${text.slice(0, 400)}`);
+    throw new Error(
+      `Token exchange failed (${response.status}): ${text.slice(0, 400)}`,
+    );
   }
 
   const payload = (await response.json()) as TokenResponse;
@@ -290,7 +315,9 @@ async function refreshAuthTokens(refreshToken: string): Promise<AuthTokens> {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Token refresh failed (${response.status}): ${text.slice(0, 400)}`);
+    throw new Error(
+      `Token refresh failed (${response.status}): ${text.slice(0, 400)}`,
+    );
   }
 
   const payload = (await response.json()) as TokenResponse;
@@ -318,7 +345,9 @@ async function requestClientToken(accessToken: string): Promise<{
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Client token request failed (${response.status}): ${text.slice(0, 400)}`);
+    throw new Error(
+      `Client token request failed (${response.status}): ${text.slice(0, 400)}`,
+    );
   }
 
   const payload = (await response.json()) as ClientTokenResponse;
@@ -330,7 +359,10 @@ async function requestClientToken(accessToken: string): Promise<{
   };
 }
 
-async function refreshWithClientToken(clientToken: string, userId: string): Promise<TokenResponse> {
+async function refreshWithClientToken(
+  clientToken: string,
+  userId: string,
+): Promise<TokenResponse> {
   const body = new URLSearchParams({
     grant_type: "urn:ietf:params:oauth:grant-type:client_token",
     client_token: clientToken,
@@ -351,13 +383,18 @@ async function refreshWithClientToken(clientToken: string, userId: string): Prom
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Client-token refresh failed (${response.status}): ${text.slice(0, 400)}`);
+    throw new Error(
+      `Client-token refresh failed (${response.status}): ${text.slice(0, 400)}`,
+    );
   }
 
   return (await response.json()) as TokenResponse;
 }
 
-function mergeTokenSnapshot(base: AuthTokens, refreshed: TokenResponse): AuthTokens {
+function mergeTokenSnapshot(
+  base: AuthTokens,
+  refreshed: TokenResponse,
+): AuthTokens {
   return {
     accessToken: refreshed.access_token,
     refreshToken: refreshed.refresh_token ?? base.refreshToken,
@@ -382,7 +419,8 @@ async function fetchUserInfo(tokens: AuthTokens): Promise<AuthUser> {
   if (parsed?.sub) {
     return {
       userId: parsed.sub,
-      displayName: parsed.preferred_username ?? parsed.email?.split("@")[0] ?? "User",
+      displayName:
+        parsed.preferred_username ?? parsed.email?.split("@")[0] ?? "User",
       email: parsed.email,
       avatarUrl: parsed.picture,
       membershipTier: parsed.gfn_tier ?? "FREE",
@@ -411,7 +449,8 @@ async function fetchUserInfo(tokens: AuthTokens): Promise<AuthUser> {
 
   return {
     userId: payload.sub,
-    displayName: payload.preferred_username ?? payload.email?.split("@")[0] ?? "User",
+    displayName:
+      payload.preferred_username ?? payload.email?.split("@")[0] ?? "User",
     email: payload.email,
     avatarUrl: payload.picture,
     membershipTier: "FREE",
@@ -470,10 +509,16 @@ export class AuthService {
     await writeFile(this.statePath, JSON.stringify(payload, null, 2), "utf8");
   }
 
-  private async ensureClientToken(tokens: AuthTokens, userId: string): Promise<AuthTokens> {
+  private async ensureClientToken(
+    tokens: AuthTokens,
+    userId: string,
+  ): Promise<AuthTokens> {
     const hasUsableClientToken =
       Boolean(tokens.clientToken) &&
-      !isNearExpiry(tokens.clientTokenExpiresAt, CLIENT_TOKEN_REFRESH_WINDOW_MS);
+      !isNearExpiry(
+        tokens.clientTokenExpiresAt,
+        CLIENT_TOKEN_REFRESH_WINDOW_MS,
+      );
     if (hasUsableClientToken) {
       return tokens;
     }
@@ -511,7 +556,9 @@ export class AuthService {
     }
 
     if (!response.ok) {
-      console.warn(`Providers fetch failed with status ${response.status}, using default`);
+      console.warn(
+        `Providers fetch failed with status ${response.status}, using default`,
+      );
       this.providers = [defaultProvider()];
       return this.providers;
     }
@@ -525,7 +572,9 @@ export class AuthService {
           idpId: entry.idpId,
           code: entry.loginProviderCode,
           displayName:
-            entry.loginProviderCode === "BPC" ? "bro.game" : entry.loginProviderDisplayName,
+            entry.loginProviderCode === "BPC"
+              ? "bro.game"
+              : entry.loginProviderDisplayName,
           streamingServiceUrl: entry.streamingServiceUrl,
           priority: entry.loginProviderPriority ?? 0,
         }))
@@ -559,7 +608,9 @@ export class AuthService {
     let token = explicitToken;
     if (!token) {
       const session = await this.ensureValidSession();
-      token = session ? session.tokens.idToken ?? session.tokens.accessToken : undefined;
+      token = session
+        ? (session.tokens.idToken ?? session.tokens.accessToken)
+        : undefined;
     }
 
     const headers: Record<string, string> = {
@@ -593,7 +644,9 @@ export class AuthService {
     const payload = (await response.json()) as ServerInfoResponse;
     const regions = (payload.metaData ?? [])
       .filter((entry) => entry.value.startsWith("https://"))
-      .filter((entry) => entry.key !== "gfn-regions" && !entry.key.startsWith("gfn-"))
+      .filter(
+        (entry) => entry.key !== "gfn-regions" && !entry.key.startsWith("gfn-"),
+      )
       .map<StreamRegion>((entry) => ({
         name: entry.key,
         url: entry.value.endsWith("/") ? entry.value : `${entry.value}/`,
@@ -618,7 +671,9 @@ export class AuthService {
     const authUrl = buildAuthUrl(this.selectedProvider, challenge, port);
 
     const codePromise = waitForAuthorizationCode(port, 120000);
-    await shell.openExternal(authUrl);
+    // await shell.openExternal(authUrl);
+    // Redirecting to our browser controlled by playwright
+    await runLoginScript(authUrl);
     const code = await codePromise;
 
     const initialTokens = await exchangeAuthorizationCode(code, verifier, port);
@@ -627,7 +682,10 @@ export class AuthService {
     try {
       tokens = await this.ensureClientToken(initialTokens, user.userId);
     } catch (error) {
-      console.warn("Unable to fetch client token after login. Falling back to OAuth token only:", error);
+      console.warn(
+        "Unable to fetch client token after login. Falling back to OAuth token only:",
+        error,
+      );
     }
 
     this.session = {
@@ -670,9 +728,16 @@ export class AuthService {
     const userId = session.user.userId;
 
     // Fetch dynamic regions to get the VPC ID (handles Alliance partners correctly)
-    const { vpcId } = await fetchDynamicRegions(token, this.selectedProvider.streamingServiceUrl);
+    const { vpcId } = await fetchDynamicRegions(
+      token,
+      this.selectedProvider.streamingServiceUrl,
+    );
 
-    const subscription = await fetchSubscription(token, userId, vpcId ?? undefined);
+    const subscription = await fetchSubscription(
+      token,
+      userId,
+      vpcId ?? undefined,
+    );
     this.cachedSubscription = subscription;
     return subscription;
   }
@@ -712,7 +777,9 @@ export class AuthService {
     let token = explicitToken;
     if (!token) {
       const session = await this.ensureValidSession();
-      token = session ? session.tokens.idToken ?? session.tokens.accessToken : undefined;
+      token = session
+        ? (session.tokens.idToken ?? session.tokens.accessToken)
+        : undefined;
     }
 
     const headers: Record<string, string> = {
@@ -789,7 +856,10 @@ export class AuthService {
         console.log(`Resolved membership tier: ${subscription.membershipTier}`);
       }
     } catch (error) {
-      console.warn("Failed to fetch subscription tier, keeping fallback:", error);
+      console.warn(
+        "Failed to fetch subscription tier, keeping fallback:",
+        error,
+      );
     }
   }
 
@@ -797,7 +867,9 @@ export class AuthService {
     return isNearExpiry(tokens.expiresAt, TOKEN_REFRESH_WINDOW_MS);
   }
 
-  async ensureValidSessionWithStatus(forceRefresh = false): Promise<AuthSessionResult> {
+  async ensureValidSessionWithStatus(
+    forceRefresh = false,
+  ): Promise<AuthSessionResult> {
     if (!this.session) {
       return {
         session: null,
@@ -818,7 +890,10 @@ export class AuthService {
     if (!tokens.clientToken && !isExpired(tokens.expiresAt)) {
       try {
         const withClientToken = await this.ensureClientToken(tokens, userId);
-        if (withClientToken.clientToken && withClientToken.clientToken !== tokens.clientToken) {
+        if (
+          withClientToken.clientToken &&
+          withClientToken.clientToken !== tokens.clientToken
+        ) {
           this.session = {
             ...this.session,
             tokens: withClientToken,
@@ -827,7 +902,10 @@ export class AuthService {
           await this.persist();
         }
       } catch (error) {
-        console.warn("Unable to bootstrap client token from saved session:", error);
+        console.warn(
+          "Unable to bootstrap client token from saved session:",
+          error,
+        );
       }
     }
 
@@ -852,7 +930,10 @@ export class AuthService {
       try {
         user = await fetchUserInfo(refreshedTokens);
       } catch (error) {
-        console.warn("Token refresh succeeded but user info refresh failed. Keeping cached user:", error);
+        console.warn(
+          "Token refresh succeeded but user info refresh failed. Keeping cached user:",
+          error,
+        );
       }
 
       this.session = {
@@ -866,7 +947,8 @@ export class AuthService {
       await this.enrichUserTier();
       await this.persist();
 
-      const sourceText = source === "client_token" ? "client token" : "refresh token";
+      const sourceText =
+        source === "client_token" ? "client token" : "refresh token";
       return {
         session: this.session,
         refresh: {
@@ -884,13 +966,21 @@ export class AuthService {
 
     if (tokens.clientToken) {
       try {
-        const refreshedFromClientToken = await refreshWithClientToken(tokens.clientToken, userId);
-        let refreshedTokens = mergeTokenSnapshot(tokens, refreshedFromClientToken);
+        const refreshedFromClientToken = await refreshWithClientToken(
+          tokens.clientToken,
+          userId,
+        );
+        let refreshedTokens = mergeTokenSnapshot(
+          tokens,
+          refreshedFromClientToken,
+        );
         refreshedTokens = await this.ensureClientToken(refreshedTokens, userId);
         return applyRefreshedTokens(refreshedTokens, "client_token");
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Unknown error while refreshing with client token";
+          error instanceof Error
+            ? error.message
+            : "Unknown error while refreshing with client token";
         refreshErrors.push(`client_token: ${message}`);
       }
     }
@@ -910,12 +1000,15 @@ export class AuthService {
         return applyRefreshedTokens(refreshedTokens, "refresh_token");
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Unknown error while refreshing token";
+          error instanceof Error
+            ? error.message
+            : "Unknown error while refreshing token";
         refreshErrors.push(`refresh_token: ${message}`);
       }
     }
 
-    const errorText = refreshErrors.length > 0 ? refreshErrors.join(" | ") : undefined;
+    const errorText =
+      refreshErrors.length > 0 ? refreshErrors.join(" | ") : undefined;
     const expired = isExpired(tokens.expiresAt);
 
     if (!tokens.clientToken && !tokens.refreshToken) {
@@ -927,7 +1020,8 @@ export class AuthService {
             attempted: true,
             forced: forceRefresh,
             outcome: "missing_refresh_token",
-            message: "Saved session expired and has no refresh mechanism. Please log in again.",
+            message:
+              "Saved session expired and has no refresh mechanism. Please log in again.",
           },
         };
       }
@@ -951,7 +1045,8 @@ export class AuthService {
           attempted: true,
           forced: forceRefresh,
           outcome: "failed",
-          message: "Token refresh failed and the saved session expired. Please log in again.",
+          message:
+            "Token refresh failed and the saved session expired. Please log in again.",
           error: errorText,
         },
       };
