@@ -67,7 +67,7 @@ const LEGACY_ANTI_AFK_SHORTCUTS = new Set([
 
 const DEFAULT_SETTINGS: Settings = {
   resolution: "1280x720",
-  fps: 60,
+  fps: 30,
   maxBitrateMbps: 75,
   codec: "H264",
   decoderPreference: "auto",
@@ -86,8 +86,8 @@ const DEFAULT_SETTINGS: Settings = {
   hideStreamButtons: false,
   sessionClockShowEveryMinutes: 60,
   sessionClockShowDurationSeconds: 30,
-  windowWidth: 1400,
-  windowHeight: 900,
+  windowWidth: 1280,
+  windowHeight: 720,
 };
 
 export class SettingsManager {

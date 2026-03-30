@@ -48,34 +48,47 @@
   "build": {
     "appId": "com.zortos.opennow.stable",
     "productName": "OpenNOW",
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "OpenCloudGaming",
-        "repo": "OpenNOW"
-      }
-    ],
-    "icon": "../logo.png",
-    "npmRebuild": false,
-    "nodeGypRebuild": false,
-    "buildDependenciesFromSource": false,
     "directories": {
-      "output": "dist-release"
+      "output": "dist-release",
+      "buildResources": "build"
     },
     "files": [
-      "dist/**",
-      "dist-electron/**",
+      "dist/**/*",
+      "dist-electron/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "node_modules/playwright",
+        "to": "node_modules/playwright",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "node_modules/playwright-core",
+        "to": "node_modules/playwright-core",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "asar": true,
+    "asarUnpack": [
+      "**/node_modules/playwright/**/*",
+      "**/node_modules/playwright-core/**/*"
+    ],
     "win": {
       "target": [
         "nsis",
         "portable"
-      ]
+      ],
+      "icon": "logo.png"
     },
     "nsis": {
-      "artifactName": "OpenNOW-v${version}-setup-${arch}.${ext}"
+      "artifactName": "OpenNOW-v${version}-setup-${arch}.${ext}",
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false
     },
     "portable": {
       "artifactName": "OpenNOW-v${version}-portable-${arch}.${ext}"

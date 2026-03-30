@@ -127,7 +127,9 @@ export async function fetchSubscription(
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`Subscription API failed with status ${response.status}: ${body}`);
+    throw new Error(
+      `Subscription API failed with status ${response.status}: ${body}`,
+    );
   }
 
   const data = (await response.json()) as SubscriptionResponse;
@@ -139,8 +141,10 @@ export async function fetchSubscription(
   const allottedMinutes = parseMinutes(data.allottedTimeInMinutes) ?? 0;
   const purchasedMinutes = parseMinutes(data.purchasedTimeInMinutes) ?? 0;
   const rolledOverMinutes = parseMinutes(data.rolledOverTimeInMinutes) ?? 0;
-  const fallbackTotalMinutes = allottedMinutes + purchasedMinutes + rolledOverMinutes;
-  const totalMinutes = parseMinutes(data.totalTimeInMinutes) ?? fallbackTotalMinutes;
+  const fallbackTotalMinutes =
+    allottedMinutes + purchasedMinutes + rolledOverMinutes;
+  const totalMinutes =
+    parseMinutes(data.totalTimeInMinutes) ?? fallbackTotalMinutes;
   const remainingMinutes = parseMinutes(data.remainingTimeInMinutes) ?? 0;
   const usedMinutes = Math.max(totalMinutes - remainingMinutes, 0);
 
@@ -220,7 +224,9 @@ export async function fetchSubscription(
     usedHours,
     remainingHours,
     totalHours,
-    firstEntitlementStartDateTime: parseIsoDate(data.firstEntitlementStartDateTime),
+    firstEntitlementStartDateTime: parseIsoDate(
+      data.firstEntitlementStartDateTime,
+    ),
     serverRegionId: vpcId,
     currentSpanStartDateTime: parseIsoDate(data.currentSpanStartDateTime),
     currentSpanEndDateTime: parseIsoDate(data.currentSpanEndDateTime),

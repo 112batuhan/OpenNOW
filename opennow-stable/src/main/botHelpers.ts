@@ -27,8 +27,14 @@ export async function runLoginScript(url: string) {
     profilePath,
     {
       headless: false,
-      viewport: null, // Essential for --start-maximized
-      args: ["--start-maximized", "--no-sandbox", "--disable-setuid-sandbox"],
+      viewport: null,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--start-maximized",
+        "--window-size=1280,720",
+        "--window-position=0,0",
+      ],
     },
   );
 
