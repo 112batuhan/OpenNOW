@@ -1664,9 +1664,7 @@ export function App(): JSX.Element {
     })();
   }, [games, authSession, streamStatus, launchError]);
 
-  // Relaunch the game on error
-  // putting a bit of delay,
-  // so that it doesn't fail until everything is cleaned up
+  // Reseting the client on error. Basically equavalent to quiting the stream
   useEffect(() => {
     (async () => {
       if (launchError && games && authSession) {
