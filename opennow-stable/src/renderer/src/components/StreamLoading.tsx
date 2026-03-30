@@ -150,6 +150,10 @@ export function StreamLoading({
             <p className="sload-message">{statusMessage}</p>
             {hasError && error && (
               <>
+                <p className="sload-error-title">
+                  Senin burada yapman gereken bir sey yok, 30 saniye sonra
+                  tekrar denenecek
+                </p>
                 <p className="sload-error-title">{error.title}</p>
                 <p className="sload-error-desc">{error.description}</p>
                 {error.code && <p className="sload-error-code">{error.code}</p>}

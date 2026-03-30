@@ -1072,11 +1072,11 @@ export function App(): JSX.Element {
 
   // Play game handler
   const handlePlayGame = useCallback(
-    async (game: GameInfo) => {
-      console.log(game);
+    async (game: GameInfo, restart = false) => {
       if (!selectedProvider) return;
 
-      if (launchInFlightRef.current || streamStatus !== "idle") {
+      // this restart thing is a bit hack but idc
+      if (!restart && (launchInFlightRef.current || streamStatus !== "idle")) {
         console.warn(
           "Ignoring play request: launch already in progress or stream not idle",
           {
@@ -1619,7 +1619,7 @@ export function App(): JSX.Element {
     }
   }, [authSession, isInitializing]);
 
-  const handleAutoStartGame = (games: GameInfo[]) => {
+  const handleAutoStartGame = async (games: GameInfo[], restart = false) => {
     const targetGame = games.find(
       (game) => game.title.toLowerCase() === "hell let loose",
     );
@@ -1648,7 +1648,7 @@ export function App(): JSX.Element {
 
       console.log(variantByGameId);
       console.log(targetGame);
-      handlePlayGame(targetGame);
+      await handlePlayGame(targetGame, restart);
     } else {
       console.log("Game not found in the list.");
     }
@@ -1656,17 +1656,26 @@ export function App(): JSX.Element {
 
   // Handling auto game start
   useEffect(() => {
-    if (games && authSession) {
-      handleAutoStartGame(games);
-    }
+    (async () => {
+      if (games && authSession) {
+        await handleAutoStartGame(games);
+      }
+    })();
   }, [games, authSession]);
 
   // Relaunch the game on error
+  // putting a bit of delay,
+  // so that it doesn't fail until everything is cleaned up
   useEffect(() => {
-    if (launchError && games && authSession) {
-      handleDismissLaunchError();
-      handleAutoStartGame(games);
-    }
+    (async () => {
+      if (launchError && games && authSession) {
+        console.log("error detected, trying to log ing again");
+        await sleep(30 * 1000);
+        await handleDismissLaunchError();
+        await handleStopStream();
+        await handleAutoStartGame(games, true);
+      }
+    })();
   }, [launchError, games, authSession]);
 
   // Game opening and server logging in clicks
