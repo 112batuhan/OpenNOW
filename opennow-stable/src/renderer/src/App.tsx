@@ -1657,11 +1657,12 @@ export function App(): JSX.Element {
   // Handling auto game start
   useEffect(() => {
     (async () => {
-      if (games && authSession) {
+      if (games && authSession && !launchError && streamStatus === "idle") {
+        await sleep(1000); // waiting just a little to allow the app to catch up
         await handleAutoStartGame(games);
       }
     })();
-  }, [games, authSession]);
+  }, [games, authSession, streamStatus, launchError]);
 
   // Relaunch the game on error
   // putting a bit of delay,
@@ -1673,7 +1674,6 @@ export function App(): JSX.Element {
         await sleep(30 * 1000);
         await handleDismissLaunchError();
         await handleStopStream();
-        await handleAutoStartGame(games, true);
       }
     })();
   }, [launchError, games, authSession]);
