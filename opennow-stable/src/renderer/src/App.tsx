@@ -1619,21 +1619,55 @@ export function App(): JSX.Element {
     }
   }, [authSession, isInitializing]);
 
+  const handleAutoStartGame = (games: GameInfo[]) => {
+    const targetGame = games.find(
+      (game) => game.title.toLowerCase() === "hell let loose",
+    );
+
+    if (targetGame) {
+      const epic_provider_variant_index = targetGame.variants.findIndex(
+        (variant) => variant.store.toLowerCase().includes("epic"),
+      );
+
+      if (epic_provider_variant_index >= 0) {
+        targetGame.selectedVariantIndex = epic_provider_variant_index;
+        targetGame.launchAppId =
+          targetGame.variants[epic_provider_variant_index].id;
+
+        targetGame.id =
+          targetGame.uuid +
+          ":" +
+          targetGame.variants[epic_provider_variant_index].id;
+
+        const game_records = {
+          [targetGame.id]: targetGame.launchAppId,
+        };
+
+        setVariantByGameId(game_records);
+      }
+
+      console.log(variantByGameId);
+      console.log(targetGame);
+      handlePlayGame(targetGame);
+    } else {
+      console.log("Game not found in the list.");
+    }
+  };
+
   // Handling auto game start
   useEffect(() => {
     if (games && authSession) {
-      const targetGame = games.find(
-        (game) => game.title.toLowerCase() === "hell let loose".toLowerCase(),
-      );
-
-      if (targetGame) {
-        console.log("Game found:", targetGame);
-        handlePlayGame(targetGame);
-      } else {
-        console.log("Game not found in the list.");
-      }
+      handleAutoStartGame(games);
     }
   }, [games, authSession]);
+
+  // Relaunch the game on error
+  useEffect(() => {
+    if (launchError && games && authSession) {
+      handleDismissLaunchError();
+      handleAutoStartGame(games);
+    }
+  }, [launchError, games, authSession]);
 
   // Game opening and server logging in clicks
   useEffect(() => {

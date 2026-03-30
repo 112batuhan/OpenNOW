@@ -237,6 +237,9 @@ async function createMainWindow(): Promise<void> {
     },
   });
 
+  // for debugging
+  // mainWindow.webContents.openDevTools();
+
   // Handle F11 fullscreen toggle — send to renderer so it uses W3C Fullscreen API
   // (which enables navigator.keyboard.lock for Escape key capture)
   mainWindow.webContents.on("before-input-event", (event, input) => {
