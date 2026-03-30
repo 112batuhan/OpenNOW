@@ -1072,11 +1072,11 @@ export function App(): JSX.Element {
 
   // Play game handler
   const handlePlayGame = useCallback(
-    async (game: GameInfo, restart = false) => {
+    async (game: GameInfo) => {
       if (!selectedProvider) return;
 
       // this restart thing is a bit hack but idc
-      if (!restart && (launchInFlightRef.current || streamStatus !== "idle")) {
+      if (launchInFlightRef.current || streamStatus !== "idle") {
         console.warn(
           "Ignoring play request: launch already in progress or stream not idle",
           {
@@ -1136,23 +1136,24 @@ export function App(): JSX.Element {
         }
 
         // Check for active sessions first
-        if (token) {
-          try {
-            const activeSessions = await window.openNow.getActiveSessions(
-              token,
-              effectiveStreamingBaseUrl,
-            );
-            if (activeSessions.length > 0) {
-              const existingSession = activeSessions[0];
-              await claimAndConnectSession(existingSession);
-              setNavbarActiveSession(null);
-              return;
-            }
-          } catch (error) {
-            console.error("Failed to claim/resume session:", error);
-            // Continue to create new session
-          }
-        }
+        // We don't want this as it's a bit buggy. Just wait for existing session to die
+        // if (token) {
+        //   try {
+        //     const activeSessions = await window.openNow.getActiveSessions(
+        //       token,
+        //       effectiveStreamingBaseUrl,
+        //     );
+        //     if (activeSessions.length > 0) {
+        //       const existingSession = activeSessions[0];
+        //       await claimAndConnectSession(existingSession);
+        //       setNavbarActiveSession(null);
+        //       return;
+        //     }
+        //   } catch (error) {
+        //     console.error("Failed to claim/resume session:", error);
+        //     // Continue to create new session
+        //   }
+        // }
 
         // Create new session
         const newSession = await window.openNow.createSession({
@@ -1619,7 +1620,7 @@ export function App(): JSX.Element {
     }
   }, [authSession, isInitializing]);
 
-  const handleAutoStartGame = async (games: GameInfo[], restart = false) => {
+  const handleAutoStartGame = async (games: GameInfo[]) => {
     const targetGame = games.find(
       (game) => game.title.toLowerCase() === "hell let loose",
     );
@@ -1648,7 +1649,7 @@ export function App(): JSX.Element {
 
       console.log(variantByGameId);
       console.log(targetGame);
-      await handlePlayGame(targetGame, restart);
+      await handlePlayGame(targetGame);
     } else {
       console.log("Game not found in the list.");
     }
@@ -1671,7 +1672,6 @@ export function App(): JSX.Element {
         console.log("error detected, trying to log ing again");
         await sleep(30 * 1000);
         await handleDismissLaunchError();
-        await handleStopStream();
       }
     })();
   }, [launchError, games, authSession]);
