@@ -16,15 +16,13 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QFrame,
 )
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, pyqtSignal
+
 
 NUM_PROFILES = 20
-AUTO_START_INTERVAL_MS = 20 * 1000  # 20 saniye
+AUTO_START_INTERVAL_MS = 20 * 1000
 
 
-# ===============================================================
-# TIMESTAMP
-# ===============================================================
 def ts():
     return datetime.now().strftime("%H:%M:%S")
 
@@ -41,12 +39,6 @@ class LogWindow(QWidget):
         layout = QVBoxLayout()
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
-        self.log_view.setStyleSheet("""
-            background-color: #000;
-            color: #0f0;
-            font-family: Consolas;
-            font-size: 13px;
-        """)
 
         for line in logs:
             self.log_view.append(line)
@@ -65,6 +57,11 @@ class LogWindow(QWidget):
 # BOT WIDGET
 # ===============================================================
 class BotWidget(QFrame):
+    log_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str, str)
+    timer_signal = pyqtSignal(str)
+    stopped_signal = pyqtSignal()
+
     def __init__(self, profile_number):
         super().__init__()
 
@@ -74,109 +71,73 @@ class BotWidget(QFrame):
         self.log_window = None
 
         self.timer_seconds = 0
-        self.timer_stop_request = True
         self.queue_start_time = None
 
-        self.setObjectName("profileCard")
-        self.setStyleSheet("""
-            QFrame#profileCard {
-                background-color: #2a2a2a;
-                border: 1px solid #555;
-                border-radius: 8px;
-                padding: 8px;
-            }
-        """)
-
-        # ===================== LAYOUT =====================
+        # ================= UI =================
         main = QHBoxLayout()
-        main.setContentsMargins(8, 6, 8, 6)
-        main.setSpacing(12)
 
         self.title = QLabel(f"🖥️ Profile {self.profile}")
-        self.title.setStyleSheet(
-            "background: transparent; font-size: 15px; font-weight: bold;"
-        )
         main.addWidget(self.title)
 
         self.status_label = QLabel("STOPPED")
-        self.status_label.setStyleSheet(
-            "background: transparent; color: red; font-weight: bold;"
-        )
         main.addWidget(self.status_label)
 
         self.timer_label = QLabel("00:00:00")
-        self.timer_label.setStyleSheet("background: transparent; color: cyan;")
         main.addWidget(self.timer_label)
 
         self.log_preview = QLabel("...")
-        self.log_preview.setStyleSheet(
-            "background: transparent; color: #ccc; font-size: 13px;"
-        )
         main.addWidget(self.log_preview, stretch=1)
-
-        btns = QHBoxLayout()
-        btns.setSpacing(4)
 
         self.start_btn = QPushButton("▶️")
         self.stop_btn = QPushButton("⏹️")
         self.restart_btn = QPushButton("🔄")
         self.viewlog_btn = QPushButton("📜")
 
-        for btn in (self.start_btn, self.stop_btn, self.restart_btn, self.viewlog_btn):
-            btn.setFixedSize(34, 34)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background: transparent;
-                    border: none;
-                    font-size: 20px;
-                }
-                QPushButton:hover {
-                    background: #444;
-                    border-radius: 6px;
-                }
-            """)
+        for b in (self.start_btn, self.stop_btn, self.restart_btn, self.viewlog_btn):
+            main.addWidget(b)
 
-        btns.addWidget(self.start_btn)
-        btns.addWidget(self.stop_btn)
-        btns.addWidget(self.restart_btn)
-        btns.addWidget(self.viewlog_btn)
-
-        main.addLayout(btns)
         self.setLayout(main)
 
+        # ================= SIGNALS =================
+        self.log_signal.connect(self._append_log_ui)
+        self.status_signal.connect(self._set_status_ui)
+        self.timer_signal.connect(self.timer_label.setText)
+        self.stopped_signal.connect(self._on_stopped_ui)
+
+        # ================= TIMER =================
+        self.qt_timer = QTimer()
+        self.qt_timer.timeout.connect(self._update_timer)
+
+        # ================= BUTTONS =================
         self.start_btn.clicked.connect(self.start_bot)
         self.stop_btn.clicked.connect(self.stop_bot)
         self.restart_btn.clicked.connect(self.restart_bot)
         self.viewlog_btn.clicked.connect(self.open_log_window)
 
-    # ---------------- STATUS ----------------
-    def set_status(self, text, color):
-        self.status_label.setText(text)
-        self.status_label.setStyleSheet(
-            f"background: transparent; color: {color}; font-weight: bold;"
-        )
-
-    def is_running(self):
-        return self.process is not None
-
-    # ---------------- TIMER ----------------
-    def timer_loop(self):
-        while not self.timer_stop_request:
-            time.sleep(1)
-            self.timer_seconds += 1
-            h = self.timer_seconds // 3600
-            m = (self.timer_seconds % 3600) // 60
-            s = self.timer_seconds % 60
-            self.timer_label.setText(f"{h:02d}:{m:02d}:{s:02d}")
-
-    # ---------------- LOG ----------------
-    def append_log(self, text):
-        line = f"[{ts()}] {text}"
+    # ---------------- UI SAFE ----------------
+    def _append_log_ui(self, line):
         self.logs.append(line)
-        self.log_preview.setText(text[:60])
-
+        self.log_preview.setText(line[:60])
         if self.log_window:
             self.log_window.append_line(line)
+
+    def _set_status_ui(self, text, color):
+        self.status_label.setText(text)
+        self.status_label.setStyleSheet(f"color: {color}; font-weight: bold;")
+
+    def _on_stopped_ui(self):
+        self.qt_timer.stop()
+        self.timer_seconds = 0
+        self.timer_label.setText("00:00:00")
+        self.status_label.setText("STOPPED")
+
+    # ---------------- TIMER ----------------
+    def _update_timer(self):
+        self.timer_seconds += 1
+        h = self.timer_seconds // 3600
+        m = (self.timer_seconds % 3600) // 60
+        s = self.timer_seconds % 60
+        self.timer_label.setText(f"{h:02d}:{m:02d}:{s:02d}")
 
     # ---------------- PROCESS OUTPUT ----------------
     def read_output(self):
@@ -186,7 +147,7 @@ class BotWidget(QFrame):
                 if not clean:
                     continue
 
-                self.append_log(clean)
+                self.log_signal.emit(f"[{ts()}] {clean}")
 
                 if "Waiting in the queue" in clean:
                     self.queue_start_time = time.time()
@@ -194,60 +155,72 @@ class BotWidget(QFrame):
                 if "Game start complete" in clean:
                     if self.queue_start_time:
                         waited = int(time.time() - self.queue_start_time)
-                        self.append_log(
-                            f"Queue wait time: {waited // 60:02d}:{waited % 60:02d}"
+                        self.log_signal.emit(
+                            f"[{ts()}] Queue wait time: {waited // 60:02d}:{waited % 60:02d}"
                         )
                         self.queue_start_time = None
 
-                    self.timer_stop_request = False
                     self.timer_seconds = 0
-                    threading.Thread(target=self.timer_loop, daemon=True).start()
-                    self.set_status("RUNNING", "lime")
+                    self.qt_timer.start(1000)
+                    self.status_signal.emit("RUNNING", "lime")
+
+        except Exception as e:
+            self.log_signal.emit(f"[{ts()}] ERROR: {e}")
 
         finally:
-            self.timer_stop_request = True
-            self.timer_seconds = 0
-            self.timer_label.setText("00:00:00")
-            self.set_status("STOPPED", "red")
-            self.append_log("Bot exited.")
+            code = self.process.poll()
+            self.log_signal.emit(f"[{ts()}] Bot exited (code {code})")
+
             self.process = None
+            self.stopped_signal.emit()
 
     # ---------------- CONTROL ----------------
     def start_bot(self):
         if self.process:
             return
-        self.append_log("Starting bot...")
 
         user_name = os.environ.get("USERNAME")
         exe_path = (
             rf"C:\Users\{user_name}\AppData\Local\Programs\opennow-stable\OpenNOW.exe"
         )
 
-        self.process = subprocess.Popen(
-            [exe_path, "--", f"--profile-index={self.profile}"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1,
-        )
+        self.log_signal.emit(f"[{ts()}] Starting bot...")
 
-        self.set_status("WAITING", "orange")
+        try:
+            self.process = subprocess.Popen(
+                [exe_path, f"--profile-index={self.profile}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+                cwd=os.path.dirname(exe_path),
+            )
+        except Exception as e:
+            self.log_signal.emit(f"[{ts()}] Failed to start: {e}")
+            return
+
+        self.status_signal.emit("WAITING", "orange")
+
         threading.Thread(target=self.read_output, daemon=True).start()
 
     def stop_bot(self):
         if self.process:
-            self.append_log("Stopping bot...")
+            self.log_signal.emit(f"[{ts()}] Stopping bot...")
             try:
+                self.process.terminate()
+                self.process.wait(timeout=5)
+            except:
                 self.process.kill()
-            except:  # noqa: E722
-                pass
 
     def restart_bot(self):
         self.stop_bot()
         self.logs.clear()
         self.start_bot()
+
+    def is_running(self):
+        return self.process is not None
 
     def open_log_window(self):
         if not self.log_window:
@@ -263,74 +236,50 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("SeedMe Dashboard")
-        self.setGeometry(200, 50, 1500, 900)
-        self.setStyleSheet("background-color: #222;")
 
         self.widgets = []
 
-        # ---------- AUTO START ----------
-        self.auto_btn = QPushButton("⏵ Auto-Start OFF")
+        self.auto_btn = QPushButton("Auto OFF")
         self.auto_btn.setCheckable(True)
         self.auto_btn.clicked.connect(self.toggle_auto)
-
-        self.auto_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #333;
-                color: #ddd;
-                border: 1px solid #555;
-                border-radius: 8px;
-                padding: 6px 14px;
-            }
-            QPushButton:hover { background-color: #444; }
-            QPushButton:checked {
-                background-color: #1f6f43;
-                color: #eaffea;
-                border-color: #2ecc71;
-            }
-        """)
 
         self.auto_timer = QTimer()
         self.auto_timer.timeout.connect(self.auto_start_next)
 
-        # ---------- LAYOUT ----------
         top = QHBoxLayout()
         top.addWidget(self.auto_btn)
-        top.addStretch()
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
 
         container = QWidget()
-        cols = QHBoxLayout()
-        left, right = QVBoxLayout(), QVBoxLayout()
+        layout = QVBoxLayout()
 
         for i in range(1, NUM_PROFILES + 1):
             w = BotWidget(i)
             self.widgets.append(w)
-            (left if i <= NUM_PROFILES // 2 else right).addWidget(w)
+            layout.addWidget(w)
 
-        cols.addLayout(left)
-        cols.addLayout(right)
-        container.setLayout(cols)
+        container.setLayout(layout)
         scroll.setWidget(container)
 
         root = QVBoxLayout()
         root.addLayout(top)
         root.addWidget(scroll)
+
         self.setLayout(root)
 
-    # ---------- AUTO START LOGIC ----------
     def toggle_auto(self):
         if self.auto_btn.isChecked():
-            self.auto_btn.setText("⏸ Auto-Start ON")
-            self.auto_start_next()
+            self.auto_btn.setText("Auto ON")
             self.auto_timer.start(AUTO_START_INTERVAL_MS)
+            self.auto_start_next()
         else:
-            self.auto_btn.setText("⏵ Auto-Start OFF")
+            self.auto_btn.setText("Auto OFF")
             self.auto_timer.stop()
 
     def auto_start_next(self):
-        for w in sorted(self.widgets, key=lambda x: x.profile):
+        for w in self.widgets:
             if not w.is_running():
                 w.start_bot()
                 break
