@@ -188,7 +188,7 @@ class BotWidget(QFrame):
 
         try:
             self.process = subprocess.Popen(
-                [exe_path, f"--profile-index={self.profile}"],
+                [exe_path, "--", f"--profile-index={self.profile}"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
