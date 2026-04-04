@@ -1,119 +1,169 @@
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { GfnWebRtcClient } from "./gfn/webrtcClient";
+import type { Worker, RecognizeResult, Word } from "tesseract.js";
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+type OCRPoint = { x: number; y: number };
+type OCRResult = { text: string; center: OCRPoint };
 
-async function clickLoop(
-  clientRef: RefObject<GfnWebRtcClient | null>,
-  duration: number,
-  interval: number,
-) {
-  const start = Date.now();
+export class GfnAutomation {
+  constructor(
+    private clientRef: RefObject<GfnWebRtcClient | null>,
+    private videoRef: RefObject<HTMLVideoElement | null>,
+    private canvasRef: RefObject<HTMLCanvasElement | null>,
+    private ctxRef: RefObject<CanvasRenderingContext2D | null>,
+    private workerRef: RefObject<Worker | null>,
+    private setDebugState: Dispatch<SetStateAction<string | null>>,
+    private signal?: AbortSignal,
+  ) {}
 
-  while (Date.now() - start < duration) {
-    clientRef.current?.sendMouseClick();
-    await sleep(interval);
+  // --- Utility Methods ---
+
+  private async sleep(ms: number) {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(resolve, ms);
+      // If the signal aborts during a sleep, clear timeout and reject
+      this.signal?.addEventListener("abort", () => {
+        clearTimeout(timeout);
+        reject(new Error("Aborted"));
+      });
+    });
   }
-}
 
-async function moveCursorToCoordinates(
-  clientRef: RefObject<GfnWebRtcClient | null>,
-  x: number,
-  y: number,
-) {
-  clientRef.current?.sendMouseMovement(-10000, -10000); // reseting mouse pos
-  await sleep(150);
-  clientRef.current?.sendMouseMovement(x, y);
-}
+  private checkAbort() {
+    if (this.signal?.aborted) {
+      throw new Error("Aborted");
+    }
+  }
 
-// Maybe include ocr sometime?
-// This seems to be consistent enough though
-export async function ServerLoginScript(
-  clientRef: RefObject<GfnWebRtcClient | null>,
-  setDebugState: Dispatch<SetStateAction<string | null>>,
-) {
-  setDebugState("Waiting for Epic Games to Load");
-  await sleep(20 * 1000);
+  private debug(message: string) {
+    this.setDebugState(message);
+    console.log(`[GfnAutomation]: ${message}`);
+  }
 
-  setDebugState("Opening Store");
-  await moveCursorToCoordinates(clientRef, 230, 180);
-  await sleep(150);
-  clientRef.current?.sendMouseClick();
+  private async clickLoop(duration: number, interval: number) {
+    const start = Date.now();
+    while (Date.now() - start < duration) {
+      this.checkAbort();
+      this.clientRef.current?.sendMouseClick();
+      await this.sleep(interval);
+    }
+  }
 
-  setDebugState("Waiting for store to load");
-  await sleep(20 * 1000);
+  private async moveCursor(x: number, y: number) {
+    this.clientRef.current?.sendMouseMovement(-10000, -10000); // Reset
+    await this.sleep(150);
+    this.clientRef.current?.sendMouseMovement(x, y);
+  }
 
-  setDebugState("Clicking on Hell Let Loose on left");
-  await moveCursorToCoordinates(clientRef, 225, 487);
-  await sleep(150);
-  await clickLoop(clientRef, 5000, 1000);
+  // --- OCR Logic ---
 
-  setDebugState("Waiting for game to launch for 90 seconds");
-  await moveCursorToCoordinates(clientRef, 10, 10);
-  await clickLoop(clientRef, 90 * 1000, 3000);
+  public async findText(targetText: string) {
+    const video = this.videoRef.current;
+    const canvas = this.canvasRef.current;
+    const worker = this.workerRef.current;
+    const ctx = this.ctxRef.current;
 
-  setDebugState("Clicking on Enlist");
-  await moveCursorToCoordinates(clientRef, 81, 307);
-  await sleep(150);
-  clientRef.current?.sendMouseClick();
+    if (!video || !canvas || !ctx || !worker || video.videoWidth === 0)
+      return null;
 
-  setDebugState("Waiting for server browser to load");
-  await sleep(5 * 1000);
+    await new Promise<void>((resolve) =>
+      video.requestVideoFrameCallback(() => resolve()),
+    );
 
-  setDebugState("Click on search box");
-  await moveCursorToCoordinates(clientRef, 650, 135);
-  await sleep(150);
-  clientRef.current?.sendMouseClick();
+    if (
+      canvas.width !== video.videoWidth ||
+      canvas.height !== video.videoHeight
+    ) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
 
-  const serverName = "turksletloose.com";
-  setDebugState("Inputting " + serverName);
-  await sleep(2000);
-  clientRef.current?.sendText(serverName);
+    ctx.drawImage(video, 0, 0);
+    const result: RecognizeResult = await worker.recognize(canvas);
+    console.log(result);
+    const words = result.data.blocks?.map((word) => ({
+      text: word.text,
+      boundingBox: {
+        x0: word.bbox.x0,
+        y0: word.bbox.y0,
+        x1: word.bbox.x1,
+        y1: word.bbox.y1,
+      },
+    }));
 
-  setDebugState("Waiting for server browser to load");
-  await sleep(20 * 1000);
+    console.log(words);
+  }
 
-  setDebugState("Spamming click on the first server");
-  await moveCursorToCoordinates(clientRef, 170, 180);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 1000, 100);
+  // --- Main Script ---
 
-  setDebugState("Waiting to log into the server");
-  await sleep(20 * 1000);
+  public async runServerLogin() {
+    try {
+      this.debug("Waiting for Epic Games to Load");
+      await this.sleep(20000);
 
-  const left_x = 300; // left team logo middle
-  const right_x = 900; // right team logo middle
+      this.debug("Opening Store");
+      await this.moveCursor(230, 180);
+      await this.sleep(150);
+      this.clientRef.current?.sendMouseClick();
 
-  // Getting a random team to join first to keep bots balanced in both teams
-  const first_try_x = Math.random() > 0.5 ? left_x : right_x;
-  const second_try_x = first_try_x === left_x ? right_x : left_x;
+      this.debug("Waiting for store to load");
+      await this.sleep(20000);
 
-  setDebugState("Joining a team: Trying the first option x: " + first_try_x);
-  await moveCursorToCoordinates(clientRef, first_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+      await this.findText("hell let loose");
 
-  setDebugState("Joining a team: Trying the second option " + second_try_x);
-  await moveCursorToCoordinates(clientRef, second_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+      this.debug("Clicking on Hell Let Loose");
+      await this.moveCursor(225, 487);
+      await this.sleep(150);
+      await this.clickLoop(5000, 1000);
 
-  // Retrying the logins to avoid bots gettin stuck in team select
-  setDebugState(
-    "Joining a team: Trying the first option again x: " + first_try_x,
-  );
-  await moveCursorToCoordinates(clientRef, first_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+      this.debug("Launching game (90s wait)");
+      await this.moveCursor(10, 10);
+      await this.clickLoop(90000, 3000);
 
-  setDebugState(
-    "Joining a team: Trying the second option again " + second_try_x,
-  );
-  await moveCursorToCoordinates(clientRef, second_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+      this.debug("Clicking on Enlist");
+      await this.moveCursor(81, 307);
+      await this.sleep(150);
+      this.clientRef.current?.sendMouseClick();
 
-  setDebugState("Done");
+      await this.sleep(5000);
+
+      this.debug("Searching for server");
+      await this.moveCursor(650, 135);
+      await this.sleep(150);
+      this.clientRef.current?.sendMouseClick();
+
+      const serverName = "turksletloose.com";
+      await this.sleep(2000);
+      this.clientRef.current?.sendText(serverName);
+
+      await this.sleep(20000);
+
+      this.debug("Joining first server result");
+      await this.moveCursor(170, 180);
+      await this.sleep(150);
+      await this.clickLoop(2000, 100);
+
+      await this.sleep(20000);
+
+      // Team Selection Logic
+      const leftX = 300;
+      const rightX = 900;
+      const firstTryX = Math.random() > 0.5 ? leftX : rightX;
+      const secondTryX = firstTryX === leftX ? rightX : leftX;
+
+      for (const x of [firstTryX, secondTryX, firstTryX, secondTryX]) {
+        this.debug(`Joining team at x: ${x}`);
+        await this.moveCursor(x, 400);
+        await this.sleep(150);
+        await this.clickLoop(10000, 1000);
+      }
+    } catch (e: any) {
+      if (e.message === "Aborted") {
+        this.debug("Script stopped by user.");
+      } else {
+        throw e;
+      }
+    }
+    this.debug("Done");
+  }
 }

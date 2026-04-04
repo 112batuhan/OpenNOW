@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QTimer, pyqtSignal
 
 
-NUM_PROFILES = 20
+NUM_PROFILES = 40
 AUTO_START_INTERVAL_MS = 20 * 1000
 
 

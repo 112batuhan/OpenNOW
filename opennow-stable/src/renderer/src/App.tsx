@@ -35,7 +35,8 @@ import { LibraryPage } from "./components/LibraryPage";
 import { SettingsPage } from "./components/SettingsPage";
 import { StreamLoading } from "./components/StreamLoading";
 import { StreamView } from "./components/StreamView";
-import { ServerLoginScript } from "./clickScript";
+import { GfnAutomation } from "./clickScript";
+import Tesseract, { createWorker } from "tesseract.js";
 
 const codecOptions: VideoCodec[] = ["H264", "H265", "AV1"];
 const resolutionOptions = [
@@ -375,6 +376,9 @@ export function App(): JSX.Element {
 
   // Autoclick states
   const [autoClickState, setAutoClickState] = useState<string | null>(null);
+  const [automationState, setAutomationState] = useState<GfnAutomation | null>(
+    null,
+  );
 
   const handleControllerPageNavigate = useCallback(
     (direction: "prev" | "next"): void => {
@@ -418,6 +422,12 @@ export function App(): JSX.Element {
   const exitPromptResolverRef = useRef<((confirmed: boolean) => void) | null>(
     null,
   );
+
+  // screenshot relate refs
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const ocrWorkerRef = useRef<Tesseract.Worker | null>(null);
+  const abortControllerRef = useRef<AbortController>(null);
 
   // Session ref sync
   useEffect(() => {
@@ -498,6 +508,21 @@ export function App(): JSX.Element {
     }, 10000);
     return () => window.clearInterval(timer);
   }, [authSession, refreshNavbarActiveSession, streamStatus]);
+
+  // Screenshot canvas and tessaract ocr initialization
+  useEffect(() => {
+    (async () => {
+      const canvas = document.createElement("canvas");
+      canvasRef.current = canvas;
+      ctxRef.current = canvas.getContext("2d", {
+        alpha: false,
+        desynchronized: true, // reduces latency
+      });
+
+      const worker = await createWorker("eng");
+      ocrWorkerRef.current = worker;
+    })();
+  }, []);
 
   // Initialize app
   useEffect(() => {
@@ -1678,10 +1703,22 @@ export function App(): JSX.Element {
 
   // Game opening and server logging in clicks
   useEffect(() => {
-    if (streamStatus === "streaming") {
-      console.log("Starting autoclick sequence");
-      ServerLoginScript(clientRef, setAutoClickState);
-    }
+    (async () => {
+      if (streamStatus === "streaming") {
+        console.log("Starting autoclick sequence");
+        const bot = new GfnAutomation(
+          clientRef,
+          videoRef,
+          canvasRef,
+          ctxRef,
+          ocrWorkerRef,
+          setAutoClickState,
+          abortControllerRef.current?.signal, // Pass the signal
+        );
+        setAutomationState(bot);
+        await bot.runServerLogin();
+      }
+    })();
   }, [streamStatus]);
 
   // Show login screen if not authenticated
