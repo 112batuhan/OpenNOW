@@ -37,6 +37,10 @@ export async function ServerLoginScript(
   setDebugState("Waiting for Epic Games to Load");
   await sleep(20 * 1000);
 
+  setDebugState("Clicking on top to exit full screen");
+  await moveCursorToCoordinates(clientRef, 8, 500);
+  await clickLoop(clientRef, 5000, 100);
+
   setDebugState("Opening Store");
   await moveCursorToCoordinates(clientRef, 230, 180);
   await sleep(150);
