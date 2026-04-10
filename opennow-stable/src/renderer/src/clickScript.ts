@@ -38,7 +38,7 @@ export async function ServerLoginScript(
   await sleep(20 * 1000);
 
   setDebugState("Clicking on top to exit full screen");
-  await moveCursorToCoordinates(clientRef, 8, 500);
+  await moveCursorToCoordinates(clientRef, 500, 5);
   await clickLoop(clientRef, 5000, 100);
 
   setDebugState("Opening Store");
