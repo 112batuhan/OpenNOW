@@ -87,37 +87,37 @@ export async function ServerLoginScript(
   setDebugState("Waiting to log into the server");
   await sleep(20 * 1000);
 
-  const left_x = 300; // left team logo middle
-  const right_x = 900; // right team logo middle
+  // const left_x = 300; // left team logo middle
+  // const right_x = 900; // right team logo middle
 
-  // Getting a random team to join first to keep bots balanced in both teams
-  const first_try_x = Math.random() > 0.5 ? left_x : right_x;
-  const second_try_x = first_try_x === left_x ? right_x : left_x;
+  // // Getting a random team to join first to keep bots balanced in both teams
+  // const first_try_x = Math.random() > 0.5 ? left_x : right_x;
+  // const second_try_x = first_try_x === left_x ? right_x : left_x;
 
-  setDebugState("Joining a team: Trying the first option x: " + first_try_x);
-  await moveCursorToCoordinates(clientRef, first_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+  // setDebugState("Joining a team: Trying the first option x: " + first_try_x);
+  // await moveCursorToCoordinates(clientRef, first_try_x, 400);
+  // await sleep(150);
+  // await clickLoop(clientRef, 2 * 5000, 1000);
 
-  setDebugState("Joining a team: Trying the second option " + second_try_x);
-  await moveCursorToCoordinates(clientRef, second_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+  // setDebugState("Joining a team: Trying the second option " + second_try_x);
+  // await moveCursorToCoordinates(clientRef, second_try_x, 400);
+  // await sleep(150);
+  // await clickLoop(clientRef, 2 * 5000, 1000);
 
-  // Retrying the logins to avoid bots gettin stuck in team select
-  setDebugState(
-    "Joining a team: Trying the first option again x: " + first_try_x,
-  );
-  await moveCursorToCoordinates(clientRef, first_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+  // // Retrying the logins to avoid bots gettin stuck in team select
+  // setDebugState(
+  //   "Joining a team: Trying the first option again x: " + first_try_x,
+  // );
+  // await moveCursorToCoordinates(clientRef, first_try_x, 400);
+  // await sleep(150);
+  // await clickLoop(clientRef, 2 * 5000, 1000);
 
-  setDebugState(
-    "Joining a team: Trying the second option again " + second_try_x,
-  );
-  await moveCursorToCoordinates(clientRef, second_try_x, 400);
-  await sleep(150);
-  await clickLoop(clientRef, 2 * 5000, 1000);
+  // setDebugState(
+  //   "Joining a team: Trying the second option again " + second_try_x,
+  // );
+  // await moveCursorToCoordinates(clientRef, second_try_x, 400);
+  // await sleep(150);
+  // await clickLoop(clientRef, 2 * 5000, 1000);
 
   setDebugState("Done");
 }
