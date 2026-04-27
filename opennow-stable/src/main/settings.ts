@@ -125,8 +125,8 @@ export class SettingsManager {
           "utf-8",
         );
       }
-
-      return merged;
+      // forcing default settings (workarround)
+      return { ...DEFAULT_SETTINGS };
     } catch (error) {
       console.error("Failed to load settings, using defaults:", error);
       return { ...DEFAULT_SETTINGS };

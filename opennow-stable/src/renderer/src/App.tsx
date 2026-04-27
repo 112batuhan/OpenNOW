@@ -313,9 +313,9 @@ export function App(): JSX.Element {
 
   // Settings State
   const [settings, setSettings] = useState<Settings>({
-    resolution: "1920x1080",
-    fps: 60,
-    maxBitrateMbps: 75,
+    resolution: "1280x720",
+    fps: 30,
+    maxBitrateMbps: 5,
     codec: "H264",
     decoderPreference: "auto",
     encoderPreference: "auto",
